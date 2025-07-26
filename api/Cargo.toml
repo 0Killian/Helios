@@ -1,0 +1,62 @@
+[workspace]
+members = [
+    "src/main",
+
+    # Common stuff used by all other crates
+    "src/core/common",
+    "src/core/entities",
+
+    # Interfaces are used by the clients of the API.
+    "src/interface/rest/server",
+
+    # Domains are the core business logic of the API.
+    "src/domain/devices/adapter",
+    "src/domain/devices/port",
+
+    "src/domain/auth/adapter",
+    "src/domain/auth/port",
+
+    "src/domain/dns/adapter",
+    "src/domain/dns/port",
+
+    "src/domain/network/adapter",
+    "src/domain/network/port",
+
+    # Infrastructure is the API external services layer.
+    "src/infrastructure/repositories/adapter", # Database access layer
+    "src/infrastructure/repositories/port",
+
+    "src/infrastructure/internet_provider_api/adapter", # API used to obtain information about the network and manage it
+    "src/infrastructure/internet_provider_api/port",
+
+    "src/infrastructure/dns_agent_api/adapter", # API used to communicate with the DNS agent
+    "src/infrastructure/dns_agent_api/port",
+
+    # Agents are binaries that are executed on remote servers to control services provided by the server.
+    "src/agents/dns", # Used to control a DNS server
+]
+resolver = "3"
+
+[workspace.dependencies]
+common = { path = "src/core/common" }
+entities = { path = "src/core/entities" }
+network-adapter = { path = "src/domain/network/adapter" }
+network-port = { path = "src/domain/network/port" }
+ip-api-adapter = { path = "src/infrastructure/internet_provider_api/adapter" }
+ip-api-port = { path = "src/infrastructure/internet_provider_api/port" }
+network = { path = "src/interface/grpc/network" }
+async-trait = "0.1.88"
+reqwest = { version = "0.12.22", features = ["json"] }
+serde = { version = "1.0.219", features = ["derive"] }
+serde_json = "1.0.141"
+clap = { version = "4.5.41", features = ["derive"] }
+tokio = { version = "1.47.0", features = ["full"] }
+strum = { version = "0.27.2", features = ["derive"] }
+chrono = { version = "0.4.41", features = ["serde"] }
+serde_path_to_error = "0.1.17"
+url = "2.5.4"
+axum = { version = "0.8.4", features = ["json", "macros"] }
+axum-distributed-routing = "0.1.3"
+dotenv = "0.15.0"
+tower-http = { version = "0.6.6", features = ["cors"] }
+serde_with = { version = "3.14.0", features = ["chrono_0_4"] }

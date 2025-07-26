@@ -1,0 +1,11 @@
+[package]
+name = "network-port"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+async-trait = { workspace = true }
+network-adapter = { workspace = true }
+entities = { workspace = true }
+ip-api-adapter = { workspace = true }
+tokio = { workspace = true }

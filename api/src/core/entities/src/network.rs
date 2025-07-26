@@ -1,0 +1,35 @@
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
+
+use serde::Serialize;
+
+#[derive(Debug, Serialize)]
+pub struct WanStats {
+    pub download: WanStatsItem,
+    pub upload: WanStatsItem,
+    pub active_sessions: usize,
+}
+
+#[derive(Debug, Serialize)]
+pub struct WanStatsItem {
+    pub max_bandwidth: usize,           // in kbps
+    pub current_bandwidth: usize,       // in kbps
+    pub total_since_last_reboot: usize, // in bytes
+    pub packets_lost: usize,
+}
+
+#[serde_with::serde_as]
+#[derive(Debug, Serialize)]
+pub struct WanConnectivity {
+    pub ipv4: Ipv4Addr,
+    pub ipv6: Ipv6Addr,
+    pub gateway: IpAddr,
+    pub status: WanStatus,
+    #[serde_as(as = "serde_with::DurationSeconds<i64>")]
+    pub uptime: chrono::Duration,
+}
+
+#[derive(Debug, Serialize)]
+pub enum WanStatus {
+    Up,
+    Down,
+}
