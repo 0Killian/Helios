@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use entities::InternetProvider;
+use strum::EnumString;
 use url::Url;
 
 pub struct Config {
@@ -11,6 +11,12 @@ pub struct InternetProviderConfig {
     pub kind: InternetProvider,
     pub base_url: Url,
     pub password: String,
+}
+
+#[derive(EnumString)]
+#[strum(serialize_all = "camelCase")]
+pub enum InternetProvider {
+    Bouygues,
 }
 
 impl Config {

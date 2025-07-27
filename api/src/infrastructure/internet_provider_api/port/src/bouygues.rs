@@ -223,12 +223,14 @@ impl InternetProviderApiAdapter for BboxInternetProviderApiPort {
         devices
             .iter()
             .map(|device| Device {
-                name: device.hostname.clone(),
-                mac: device.macaddress.clone(),
-                ip: device.ipaddress,
-                connected: device.active == 1,
                 last_seen: chrono::Utc::now()
-                    - chrono::Duration::seconds(device.lastseen.value.unwrap() as i64), // now - lastseen
+                    - chrono::Duration::seconds(device.lastseen.value.unwrap() as i64),
+                mac_address: device.macaddress.parse().unwrap(),
+                last_known_ip: device.ipaddress,
+                display_name: device.hostname.clone(),
+                is_name_custom: false,
+                notes: String::new(),
+                is_online: device.active == 1,
             })
             .collect()
     }

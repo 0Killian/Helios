@@ -10,6 +10,7 @@ create table core.devices (
     is_name_custom boolean not null default false, -- true if the name is user-defined, false if the hostname of the device
     notes text, -- custom notes left by the user
     is_online boolean not null default false, -- checked periodically
+    last_seen timestamptz with time zone default now(),
     created_at timestamptz with time zone default now(),
     updated_at timestamptz with time zone default now()
 );

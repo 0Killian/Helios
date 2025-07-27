@@ -2,7 +2,12 @@ use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
 use serde::Serialize;
 
+mod mac_address;
+
+pub use mac_address::*;
+
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct WanStats {
     pub download: WanStatsItem,
     pub upload: WanStatsItem,
@@ -10,6 +15,7 @@ pub struct WanStats {
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct WanStatsItem {
     pub max_bandwidth: usize,           // in kbps
     pub current_bandwidth: usize,       // in kbps
@@ -19,6 +25,7 @@ pub struct WanStatsItem {
 
 #[serde_with::serde_as]
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct WanConnectivity {
     pub ipv4: Ipv4Addr,
     pub ipv6: Ipv6Addr,
