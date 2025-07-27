@@ -1,0 +1,13 @@
+[package]
+name = "cron"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+common.workspace = true
+domain.workspace = true
+internet-provider-api.workspace = true
+repositories.workspace = true
+
+tokio.workspace = true
+sqlx.workspace = true

@@ -4,7 +4,9 @@ use mac_address::MacAddress;
 use serde::Serialize;
 use sqlx::FromRow;
 
-#[derive(Debug, Serialize, FromRow)]
+use crate::Service;
+
+#[derive(Clone, Debug, Serialize, FromRow)]
 #[serde(rename_all = "camelCase")]
 pub struct Device {
     pub mac_address: MacAddress,
@@ -32,4 +34,10 @@ impl Device {
 
         self
     }
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct FullDevice {
+    pub device: Device,
+    pub services: Option<Vec<Service>>,
 }
