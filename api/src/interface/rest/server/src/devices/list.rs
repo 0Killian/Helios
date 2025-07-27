@@ -1,5 +1,7 @@
 use axum::{Json, extract::State};
 use axum_distributed_routing::route;
+use entities::Pagination;
+use futures::{StreamExt, stream::FuturesUnordered};
 use serde::Deserialize;
 
 use crate::{
@@ -9,8 +11,9 @@ use crate::{
 
 #[derive(Debug, Deserialize)]
 pub struct ListDeviceQuery {
-    pub page: Option<u32>,
-    pub limit: Option<u32>,
+    #[serde(flatten, deserialize_with = "entities::deserialize_option_pagination")]
+    pub pagination: Option<Pagination>,
+
     #[serde(default)]
     pub full: bool,
 }
@@ -22,18 +25,18 @@ route!(
     query = ListDeviceQuery,
 
     async fetch_devices(state: State<Services>) -> Json<Vec<DeviceResponse>> {
-        let mut devices = state.devices.lock().await;
-        let list = devices.list_devices(query.page, query.limit).await;
+        let list = state.devices.lock().await.list_devices(query.pagination).await;
 
         if list.is_empty() {
             return Json(vec![]);
         }
 
-        let mut response = list.iter().map(|device| {
+        let response = FuturesUnordered::from_iter(list.into_iter().map(async |device| {
             if query.full {
+                let mac = device.mac_address;
                 DeviceResponse {
                     device,
-                    services: devices.list_services(device.device_mac).await,
+                    services: Some(state.devices.lock().await.list_services(mac).await),
                 }
             } else {
                 DeviceResponse {
@@ -41,8 +44,8 @@ route!(
                     services: None,
                 }
             }
-        }).collect::<Vec<_>>();
+        }));
 
-        Json(list)
+        Json(response.collect().await)
     }
 );

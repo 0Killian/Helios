@@ -1,14 +1,28 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
+use devices_adapter::DevicesAdapter;
+use entities::{Device, MacAddress, Pagination, Service, SharedReference};
+use ip_api_adapter::InternetProviderApiAdapter;
+
+pub struct DevicesPort {
+    ip_api: SharedReference<dyn InternetProviderApiAdapter>,
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+impl DevicesPort {
+    pub fn new(ip_api: SharedReference<dyn InternetProviderApiAdapter>) -> Self {
+        DevicesPort { ip_api }
+    }
+}
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
+#[async_trait::async_trait]
+impl DevicesAdapter for DevicesPort {
+    async fn list_devices(&self, _: Option<Pagination>) -> Vec<Device> {
+        todo!()
+    }
+
+    async fn list_services(&self, _: MacAddress) -> Vec<Service> {
+        todo!()
+    }
+
+    async fn scan_devices(&self) {
+        todo!()
     }
 }

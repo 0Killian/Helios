@@ -1,14 +1,13 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
-}
+use entities::{Device, MacAddress, Pagination, Service};
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+#[async_trait::async_trait]
+pub trait DevicesAdapter: Send {
+    /// List all devices stored in the database
+    async fn list_devices(&self, pagination: Option<Pagination>) -> Vec<Device>;
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
+    /// List all services attached to a device
+    async fn list_services(&self, device_mac: MacAddress) -> Vec<Service>;
+
+    /// Scan the devices connected to the network and persist them in the database
+    async fn scan_devices(&self);
 }

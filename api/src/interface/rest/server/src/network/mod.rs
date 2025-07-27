@@ -20,7 +20,7 @@ route!(
 
     #[axum::debug_handler]
     async fetch_network(state: State<Services>) -> Json<NetworkResponse> {
-        let mut api = state.internet_provider_api.lock().await;
+        let mut api = state.infrastructure.internet_provider_api.lock().await;
         let stats = api.wan_stats().await;
         let connectivity = api.wan_connectivity().await;
 

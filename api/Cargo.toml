@@ -61,3 +61,6 @@ dotenv = "0.15.0"
 tower-http = { version = "0.6.6", features = ["cors"] }
 serde_with = { version = "3.14.0", features = ["chrono_0_4"] }
 uuid = { version = "1.17.0", features = ["serde", "v7"] }
+devices-adapter = { path = "src/domain/devices/adapter" }
+devices-port = { path = "src/domain/devices/port" }
+futures = "0.3.31"
