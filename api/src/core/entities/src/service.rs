@@ -3,7 +3,7 @@ use serde::Serialize;
 use sqlx::prelude::{FromRow, Type};
 use uuid::Uuid;
 
-#[derive(Debug, Serialize, FromRow)]
+#[derive(Clone, Debug, Serialize, FromRow)]
 #[serde(rename_all = "camelCase")]
 pub struct Service {
     pub service_id: Uuid,
@@ -20,7 +20,7 @@ pub enum ServiceKind {
     HelloWorld,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ServicePort {
     pub port: u16,

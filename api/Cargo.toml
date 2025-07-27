@@ -1,53 +1,29 @@
 [workspace]
 members = [
-    "src/main",
-
     # Common stuff used by all other crates
     "src/core/common",
     "src/core/entities",
+    "src/core/ports",
 
     # Interfaces are used by the clients of the API.
-    "src/interface/rest/server",
+    "src/interface/rest",
+    "src/interface/cron",
 
-    # Domains are the core business logic of the API.
-    "src/domain/devices/adapter",
-    "src/domain/devices/port",
-
-    "src/domain/auth/adapter",
-    "src/domain/auth/port",
-
-    "src/domain/dns/adapter",
-    "src/domain/dns/port",
-
-    "src/domain/network/adapter",
-    "src/domain/network/port",
+    "src/domain",
 
     # Infrastructure is the API external services layer.
-    "src/infrastructure/repositories/adapter", # Database access layer
-    "src/infrastructure/repositories/port",
-
-    "src/infrastructure/internet_provider_api/adapter", # API used to obtain information about the network and manage it
-    "src/infrastructure/internet_provider_api/port",
-
-    "src/infrastructure/dns_agent_api/adapter", # API used to communicate with the DNS agent
-    "src/infrastructure/dns_agent_api/port",
-
-    # Agents are binaries that are executed on remote servers to control services provided by the server.
-    "src/agents/dns", # Used to control a DNS server
+    "src/infrastructure/repositories",
+    "src/infrastructure/internet_provider_api", # API used to obtain information about the network and manage it
 ]
 resolver = "3"
 
 [workspace.dependencies]
 common = { path = "src/core/common" }
 entities = { path = "src/core/entities" }
-ip-api-adapter = { path = "src/infrastructure/internet_provider_api/adapter" }
-ip-api-port = { path = "src/infrastructure/internet_provider_api/port" }
-repositories-adapter = { path = "src/infrastructure/repositories/adapter" }
-repositories-port = { path = "src/infrastructure/repositories/port" }
-network-adapter = { path = "src/domain/network/adapter" }
-network-port = { path = "src/domain/network/port" }
-devices-adapter = { path = "src/domain/devices/adapter" }
-devices-port = { path = "src/domain/devices/port" }
+ports = { path = "src/core/ports" }
+internet-provider-api = { path = "src/infrastructure/internet_provider_api" }
+repositories = { path = "src/infrastructure/repositories" }
+domain = { path = "src/domain" }
 
 async-trait = "0.1.88"
 reqwest = { version = "0.12.22", features = ["json"] }

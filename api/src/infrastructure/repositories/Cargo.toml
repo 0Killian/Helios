@@ -1,0 +1,13 @@
+[package]
+name = "repositories"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+ports.workspace = true
+entities.workspace = true
+
+async-trait.workspace = true
+uuid.workspace = true
+sqlx.workspace = true
+itertools.workspace = true

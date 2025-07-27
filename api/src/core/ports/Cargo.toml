@@ -1,0 +1,10 @@
+[package]
+name = "ports"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+entities.workspace = true
+async-trait.workspace = true
+uuid.workspace = true
+mac_address.workspace = true

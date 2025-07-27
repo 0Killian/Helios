@@ -65,14 +65,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1505bd5d3d116872e7271a6d4e16d81d0c8570876c8de68093a09ac269d8aac0"
 
 [[package]]
-name = "auth-adapter"
-version = "0.1.0"
-
-[[package]]
-name = "auth-port"
-version = "0.1.0"
-
-[[package]]
 name = "autocfg"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -331,6 +323,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "19d374276b40fb8bbdee95aef7c7fa6b5316ec764510eb64b8dd0e2ed0d7e7f5"
 
 [[package]]
+name = "cron"
+version = "0.1.0"
+dependencies = [
+ "common",
+ "domain",
+ "internet-provider-api",
+ "repositories",
+ "sqlx",
+ "tokio",
+]
+
+[[package]]
 name = "crossbeam-queue"
 version = "0.3.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -412,31 +416,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "devices-adapter"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "chrono",
- "entities",
- "mac_address",
-]
-
-[[package]]
-name = "devices-port"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "chrono",
- "devices-adapter",
- "entities",
- "ip-api-adapter",
- "mac_address",
- "repositories-adapter",
- "sqlx",
- "tokio",
-]
-
-[[package]]
 name = "digest"
 version = "0.10.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -460,24 +439,14 @@ dependencies = [
 ]
 
 [[package]]
-name = "dns-adapter"
+name = "domain"
 version = "0.1.0"
-
-[[package]]
-name = "dns-agent"
-version = "0.1.0"
-
-[[package]]
-name = "dns-agent-api-adapter"
-version = "0.1.0"
-
-[[package]]
-name = "dns-agent-api-port"
-version = "0.1.0"
-
-[[package]]
-name = "dns-port"
-version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "entities",
+ "mac_address",
+ "ports",
+]
 
 [[package]]
 name = "dotenv"
@@ -524,7 +493,6 @@ dependencies = [
  "serde",
  "serde_with",
  "sqlx",
- "strum",
  "tokio",
  "uuid",
 ]
@@ -1128,6 +1096,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "internet-provider-api"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "common",
+ "entities",
+ "ports",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
 name = "inventory"
 version = "0.3.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1145,31 +1128,6 @@ dependencies = [
  "bitflags",
  "cfg-if",
  "libc",
-]
-
-[[package]]
-name = "ip-api-adapter"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "entities",
-]
-
-[[package]]
-name = "ip-api-port"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "chrono",
- "common",
- "entities",
- "ip-api-adapter",
- "reqwest",
- "serde",
- "serde_json",
- "serde_path_to_error",
- "strum",
- "tokio",
 ]
 
 [[package]]
@@ -1293,10 +1251,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "main"
-version = "0.1.0"
-
-[[package]]
 name = "matchit"
 version = "0.8.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1368,25 +1322,6 @@ dependencies = [
  "security-framework",
  "security-framework-sys",
  "tempfile",
-]
-
-[[package]]
-name = "network-adapter"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "entities",
-]
-
-[[package]]
-name = "network-port"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "entities",
- "ip-api-adapter",
- "network-adapter",
- "tokio",
 ]
 
 [[package]]
@@ -1598,6 +1533,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7edddbd0b52d732b21ad9a5fab5c704c14cd949e5e9a1ec5929a24fded1b904c"
 
 [[package]]
+name = "ports"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "entities",
+ "mac_address",
+ "uuid",
+]
+
+[[package]]
 name = "potential_utf"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1705,23 +1650,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "repositories-adapter"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "entities",
- "sqlx",
- "uuid",
-]
-
-[[package]]
-name = "repositories-port"
+name = "repositories"
 version = "0.1.0"
 dependencies = [
  "async-trait",
  "entities",
  "itertools",
- "repositories-adapter",
+ "ports",
  "sqlx",
  "uuid",
 ]
@@ -1764,6 +1699,25 @@ dependencies = [
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
+]
+
+[[package]]
+name = "rest"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "axum-distributed-routing",
+ "common",
+ "domain",
+ "entities",
+ "futures",
+ "internet-provider-api",
+ "ports",
+ "repositories",
+ "serde",
+ "sqlx",
+ "tokio",
+ "tower-http",
 ]
 
 [[package]]
@@ -2010,30 +1964,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
-]
-
-[[package]]
-name = "server"
-version = "0.1.0"
-dependencies = [
- "axum",
- "axum-distributed-routing",
- "chrono",
- "common",
- "devices-adapter",
- "devices-port",
- "entities",
- "futures",
- "ip-api-adapter",
- "ip-api-port",
- "network-adapter",
- "network-port",
- "repositories-adapter",
- "repositories-port",
- "serde",
- "sqlx",
- "tokio",
- "tower-http",
 ]
 
 [[package]]
