@@ -53,7 +53,7 @@ impl ServicesRepositoryAdapter for ServicesRepositoryPort {
             r#"
             SELECT * FROM core.services s
             INNER JOIN core.service_ports sp ON s.service_id = sp.service_id
-            WHERE mac_address = $1
+            WHERE device_mac = $1
         "#,
         )
         .bind(mac_address)

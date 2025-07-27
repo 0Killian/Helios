@@ -2,14 +2,14 @@
 export interface NetworkStats {
   download: NetworkStatsItem;
   upload: NetworkStatsItem;
-  active_sessions: number;
+  activeSessions: number;
 }
 
 export interface NetworkStatsItem {
-  max_bandwidth: number;
-  current_bandwidth: number;
-  total_since_last_reboot: number;
-  packets_lost: number;
+  maxBandwidth: number;
+  currentBandwidth: number;
+  totalSinceLastReboot: number;
+  packetsLost: number;
 }
 
 export interface NetworkConnectivity {
