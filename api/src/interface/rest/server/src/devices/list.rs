@@ -25,7 +25,7 @@ route!(
     query = ListDeviceQuery,
 
     async fetch_devices(state: State<Services>) -> Json<Vec<DeviceResponse>> {
-        let list = state.devices.lock().await.list_devices(query.pagination).await;
+        let list = state.devices.list_devices(query.pagination).await;
 
         if list.is_empty() {
             return Json(vec![]);
@@ -36,7 +36,7 @@ route!(
                 let mac = device.mac_address;
                 DeviceResponse {
                     device,
-                    services: Some(state.devices.lock().await.list_services(mac).await),
+                    services: Some(state.devices.list_services(mac).await),
                 }
             } else {
                 DeviceResponse {

@@ -416,6 +416,7 @@ name = "devices-adapter"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "chrono",
  "entities",
  "mac_address",
 ]
@@ -425,10 +426,13 @@ name = "devices-port"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "chrono",
  "devices-adapter",
  "entities",
  "ip-api-adapter",
  "mac_address",
+ "repositories-adapter",
+ "sqlx",
  "tokio",
 ]
 
@@ -1165,6 +1169,7 @@ dependencies = [
  "serde_json",
  "serde_path_to_error",
  "strum",
+ "tokio",
 ]
 
 [[package]]
@@ -2013,6 +2018,7 @@ version = "0.1.0"
 dependencies = [
  "axum",
  "axum-distributed-routing",
+ "chrono",
  "common",
  "devices-adapter",
  "devices-port",
@@ -2022,7 +2028,10 @@ dependencies = [
  "ip-api-port",
  "network-adapter",
  "network-port",
+ "repositories-adapter",
+ "repositories-port",
  "serde",
+ "sqlx",
  "tokio",
  "tower-http",
 ]

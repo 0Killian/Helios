@@ -7,3 +7,4 @@ edition = "2024"
 entities.workspace = true
 async-trait.workspace = true
 mac_address.workspace = true
+chrono.workspace = true

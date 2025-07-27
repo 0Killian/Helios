@@ -4,17 +4,21 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-tokio.workspace = true
-axum.workspace = true
-axum-distributed-routing.workspace = true
 network-adapter.workspace = true
 network-port.workspace = true
 ip-api-adapter.workspace = true
 ip-api-port.workspace = true
+devices-adapter.workspace = true
+devices-port.workspace = true
+repositories-adapter.workspace = true
+repositories-port.workspace = true
+tokio.workspace = true
+axum.workspace = true
+axum-distributed-routing.workspace = true
 common.workspace = true
 entities.workspace = true
 serde.workspace = true
 tower-http.workspace = true
-devices-adapter.workspace = true
-devices-port.workspace = true
 futures.workspace = true
+sqlx.workspace = true
+chrono.workspace = true

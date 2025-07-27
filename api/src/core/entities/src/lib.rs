@@ -17,4 +17,4 @@ pub trait ToSql {
     fn to_sql(&self) -> String;
 }
 
-pub type SharedReference<T> = Arc<Mutex<Box<T>>>;
+pub type SharedLockedReference<T> = Arc<Mutex<T>>;

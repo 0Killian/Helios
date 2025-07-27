@@ -88,4 +88,101 @@ impl ServicesRepositoryAdapter for ServicesRepositoryPort {
             ))
         }
     }
+
+    async fn create(&self, connection: &mut PgConnection, service: Service) {
+        sqlx::query(
+            r#"
+            INSERT INTO core.services (
+                service_id,
+                device_mac,
+                display_name,
+                kind,
+                is_managed
+            ) VALUES ($1, $2, $3, $4, $5)
+        "#,
+        )
+        .bind(service.service_id)
+        .bind(service.device_mac)
+        .bind(service.display_name)
+        .bind(service.kind)
+        .bind(service.is_managed)
+        .execute(&mut *connection)
+        .await
+        .unwrap();
+
+        for port in service.ports {
+            sqlx::query(
+                r#"
+                INSERT INTO core.service_ports (
+                    service_id,
+                    port,
+                    transport_protocol,
+                    application_protocol,
+                    is_online
+                ) VALUES ($1, $2, $3, $4, $5)
+            "#,
+            )
+            .bind(service.service_id)
+            .bind(port.port as i64)
+            .bind(port.transport_protocol)
+            .bind(port.application_protocol)
+            .bind(port.is_online)
+            .execute(&mut *connection)
+            .await
+            .unwrap();
+        }
+    }
+
+    async fn update(&self, connection: &mut PgConnection, service: Service) {
+        sqlx::query(
+            r#"
+            UPDATE core.services
+            SET device_mac = $2,
+                display_name = $3,
+                kind = $4,
+                is_managed = $5
+            WHERE service_id = $1
+            "#,
+        )
+        .bind(service.service_id)
+        .bind(service.device_mac)
+        .bind(service.display_name)
+        .bind(service.kind)
+        .bind(service.is_managed)
+        .execute(&mut *connection)
+        .await
+        .unwrap();
+
+        sqlx::query(
+            r#"
+            DELETE FROM core.service_ports WHERE service_id = $1
+            "#,
+        )
+        .bind(service.service_id)
+        .execute(&mut *connection)
+        .await
+        .unwrap();
+
+        for port in service.ports {
+            sqlx::query(
+                r#"
+                INSERT INTO core.service_ports (
+                    service_id,
+                    port,
+                    transport_protocol,
+                    application_protocol,
+                    is_online
+                ) VALUES ($1, $2, $3, $4, $5)
+            "#,
+            )
+            .bind(service.service_id)
+            .bind(port.port as i64)
+            .bind(port.transport_protocol)
+            .bind(port.application_protocol)
+            .bind(port.is_online)
+            .execute(&mut *connection)
+            .await
+            .unwrap();
+        }
+    }
 }

@@ -5,8 +5,11 @@ edition = "2024"
 
 [dependencies]
 ip-api-adapter.workspace = true
+devices-adapter.workspace = true
+repositories-adapter.workspace = true
 async-trait.workspace = true
 tokio.workspace = true
-devices-adapter.workspace = true
 entities.workspace = true
 mac_address.workspace = true
+chrono.workspace = true
+sqlx.workspace = true

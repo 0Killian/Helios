@@ -14,11 +14,12 @@ pub struct Device {
     pub notes: String,
     pub is_online: bool,
     pub last_seen: chrono::DateTime<chrono::Utc>,
+    pub last_scanned: chrono::DateTime<chrono::Utc>,
 }
 
 impl Device {
     /// Updates the device with the provided device informations.
-    pub fn update(&mut self, new_device: Device) {
+    pub fn update(mut self, new_device: Device) -> Self {
         assert!(self.mac_address == new_device.mac_address);
         self.last_known_ip = new_device.last_known_ip;
         if !self.is_name_custom {
@@ -27,5 +28,8 @@ impl Device {
 
         self.is_online = new_device.is_online;
         self.last_seen = new_device.last_seen;
+        self.last_scanned = new_device.last_scanned;
+
+        self
     }
 }

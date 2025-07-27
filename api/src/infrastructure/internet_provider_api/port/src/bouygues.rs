@@ -5,12 +5,13 @@ use entities::{Device, WanConnectivity, WanStats, WanStatsItem, WanStatus};
 use ip_api_adapter::InternetProviderApiAdapter;
 use reqwest::{StatusCode, Url};
 use serde::{Deserialize, de::Visitor};
+use tokio::sync::RwLock;
 
 pub struct BboxInternetProviderApiPort {
     client: reqwest::Client,
     base_url: Url,
     password: String,
-    cookie: String,
+    cookie: RwLock<String>,
 }
 
 #[derive(Debug)]
@@ -116,11 +117,11 @@ pub struct BboxInfo {
 
 impl BboxInternetProviderApiPort {
     pub async fn new(base_url: Url, password: String) -> BboxInternetProviderApiPort {
-        let mut api = BboxInternetProviderApiPort {
+        let api = BboxInternetProviderApiPort {
             client: reqwest::Client::new(),
             base_url,
             password,
-            cookie: String::new(),
+            cookie: RwLock::new(String::new()),
         };
 
         api.authenticate().await;
@@ -128,7 +129,7 @@ impl BboxInternetProviderApiPort {
         api
     }
 
-    async fn authenticate(&mut self) {
+    async fn authenticate(&self) {
         let response = self
             .client
             .post(self.base_url.clone().join("/api/v1/login").unwrap())
@@ -140,7 +141,7 @@ impl BboxInternetProviderApiPort {
             .await
             .unwrap();
 
-        self.cookie = response
+        *self.cookie.write().await = response
             .headers()
             .get("Set-Cookie")
             .unwrap()
@@ -149,15 +150,15 @@ impl BboxInternetProviderApiPort {
             .to_string();
     }
 
-    async fn handle_disconnect<F>(&mut self, callback: F) -> reqwest::Response
+    async fn handle_disconnect<F>(&self, callback: F) -> reqwest::Response
     where
-        F: Fn(&Self) -> reqwest::RequestBuilder,
+        F: AsyncFn(&Self) -> reqwest::RequestBuilder,
     {
-        let response = callback(self).send().await.unwrap();
+        let response = callback(self).await.send().await.unwrap();
 
         if response.status() == StatusCode::UNAUTHORIZED {
             self.authenticate().await;
-            callback(self).send().await.unwrap()
+            callback(self).await.send().await.unwrap()
         } else {
             response
         }
@@ -166,7 +167,7 @@ impl BboxInternetProviderApiPort {
 
 #[async_trait::async_trait]
 impl InternetProviderApiAdapter for BboxInternetProviderApiPort {
-    async fn wan_connectivity(&mut self) -> WanConnectivity {
+    async fn wan_connectivity(&self) -> WanConnectivity {
         let response: Vec<serde_json::Value> = self
             .client
             .get(self.base_url.clone().join("/api/v1/wan/ip").unwrap())
@@ -204,12 +205,12 @@ impl InternetProviderApiAdapter for BboxInternetProviderApiPort {
         }
     }
 
-    async fn list_devices(&mut self) -> Vec<Device> {
+    async fn list_devices(&self) -> Vec<Device> {
         let response: Vec<serde_json::Value> = self
-            .handle_disconnect(|self| {
+            .handle_disconnect(async |self| {
                 self.client
                     .get(self.base_url.clone().join("/api/v1/hosts").unwrap())
-                    .header("Cookie", self.cookie.clone())
+                    .header("Cookie", self.cookie.read().await.clone())
             })
             .await
             .json()
@@ -231,16 +232,17 @@ impl InternetProviderApiAdapter for BboxInternetProviderApiPort {
                 is_name_custom: false,
                 notes: String::new(),
                 is_online: device.active == 1,
+                last_scanned: chrono::Utc::now(),
             })
             .collect()
     }
 
-    async fn wan_stats(&mut self) -> WanStats {
+    async fn wan_stats(&self) -> WanStats {
         let stats: Vec<serde_json::Value> = self
-            .handle_disconnect(|self| {
+            .handle_disconnect(async |self| {
                 self.client
                     .get(self.base_url.clone().join("/api/v1/wan/ip/stats").unwrap())
-                    .header("Cookie", self.cookie.clone())
+                    .header("Cookie", self.cookie.read().await.clone())
             })
             .await
             .json()
@@ -251,7 +253,7 @@ impl InternetProviderApiAdapter for BboxInternetProviderApiPort {
             serde_json::from_value(stats[0]["wan"]["ip"]["stats"].clone()).unwrap();
 
         let sessions: Vec<serde_json::Value> = self
-            .handle_disconnect(|self| {
+            .handle_disconnect(async |self| {
                 self.client
                     .get(
                         self.base_url
@@ -259,7 +261,7 @@ impl InternetProviderApiAdapter for BboxInternetProviderApiPort {
                             .join("/api/v1/wan/diags/sessions")
                             .unwrap(),
                     )
-                    .header("Cookie", self.cookie.clone())
+                    .header("Cookie", self.cookie.read().await.clone())
             })
             .await
             .json()
