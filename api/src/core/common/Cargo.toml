@@ -5,5 +5,5 @@ edition = "2024"
 
 [dependencies]
 url.workspace = true
-entities.workspace = true
 dotenv.workspace = true
+strum.workspace = true

@@ -4,3 +4,9 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+async-trait.workspace = true
+repositories-adapter.workspace = true
+uuid.workspace = true
+sqlx.workspace = true
+entities.workspace = true
+itertools.workspace = true

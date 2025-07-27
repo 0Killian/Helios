@@ -1,9 +1,9 @@
 import { RootState } from "@/store";
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
-import { Device } from "@/models";
+import { DeviceFull } from "@/models";
 
 interface DevicesState {
-  devices: Device[];
+  devices: DeviceFull[];
   status: "idle" | "loading" | "succeeded" | "failed";
   error: string | null;
 }
@@ -18,12 +18,14 @@ const initialState: DevicesState = {
  * Fetch all network devices
  */
 export const fetchDevices = createAsyncThunk<
-  Device[],
+  DeviceFull[],
   void,
   { state: RootState }
 >("devices/fetchDevices", async () => {
   // TODO: BASE URL should be configurable
-  const response = await fetch("http://127.0.0.1:3000/api/v1/devices");
+  const response = await fetch(
+    "http://127.0.0.1:3000/api/v1/devices?full=true",
+  );
   if (!response.ok) {
     throw new Error("Failed to fetch devices");
   }

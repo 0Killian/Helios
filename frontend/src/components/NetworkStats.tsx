@@ -77,6 +77,7 @@ export function NetworkStats({
   hasFailed: boolean;
   wan: NetworkWan | null;
 }) {
+  console.log(wan);
   if (!wan) {
     return (
       <div className="relative">
@@ -121,21 +122,21 @@ export function NetworkStats({
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-2xl font-bold text-primary">
-              {formatBandwidth(wan.stats.download.current_bandwidth)}
+              {formatBandwidth(wan.stats.download.currentBandwidth)}
             </span>
             <span className="text-sm text-muted-foreground">
-              / {formatBandwidth(wan.stats.download.max_bandwidth)}
+              / {formatBandwidth(wan.stats.download.maxBandwidth)}
             </span>
           </div>
           <Progress
             value={getProgress(
-              wan.stats.download.current_bandwidth,
-              wan.stats.download.max_bandwidth,
+              wan.stats.download.currentBandwidth,
+              wan.stats.download.maxBandwidth,
             )}
             className="h-2"
           />
           <p className="text-xs text-muted-foreground/70 mt-1">
-            {wan.stats.download.packets_lost} packets dropped
+            {wan.stats.download.packetsLost} packets dropped
           </p>
         </div>
       </Card>
@@ -154,22 +155,22 @@ export function NetworkStats({
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-2xl font-bold text-accent">
-              {formatBandwidth(wan.stats.upload.current_bandwidth)}
+              {formatBandwidth(wan.stats.upload.currentBandwidth)}
             </span>
             <span className="text-sm text-muted-foreground">
-              / {formatBandwidth(wan.stats.upload.max_bandwidth)}
+              / {formatBandwidth(wan.stats.upload.maxBandwidth)}
             </span>
           </div>
           <Progress
             value={getProgress(
-              wan.stats.upload.current_bandwidth,
-              wan.stats.upload.max_bandwidth,
+              wan.stats.upload.currentBandwidth,
+              wan.stats.upload.maxBandwidth,
             )}
             className="h-2"
             indicatorClassName="bg-accent"
           />
           <p className="text-xs text-muted-foreground/70 mt-1">
-            {wan.stats.upload.packets_lost} packets dropped
+            {wan.stats.upload.packetsLost} packets dropped
           </p>
         </div>
       </Card>
@@ -193,7 +194,7 @@ export function NetworkStats({
               Active Connections
             </span>
             <span className="text-lg font-semibold text-card-foreground">
-              {wan.stats.active_sessions}
+              {wan.stats.activeSessions}
             </span>
           </div>
           <div className="flex items-center justify-between">

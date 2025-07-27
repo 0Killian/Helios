@@ -8,7 +8,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/DropdownMenu";
 import { Monitor, ChevronDown, AlertTriangle } from "lucide-react";
-import { Device } from "@/models";
+import { Device, DeviceFull } from "@/models";
 import { cn } from "@/lib";
 import { Skeleton } from "./ui/Skeleton";
 import { RootState } from "@/store";
@@ -58,7 +58,7 @@ export const DeviceList = ({
   hasFailed,
   status,
 }: {
-  devices: Device[];
+  devices: DeviceFull[];
   hasFailed: boolean;
   status: RootState["devices"]["status"];
 }) => {
@@ -68,7 +68,7 @@ export const DeviceList = ({
   };
 
   const getStatusColor = (device: Device) => {
-    return device.connected
+    return device.isOnline
       ? "bg-success text-success-foreground"
       : "bg-muted text-muted-foreground";
   };
@@ -133,17 +133,17 @@ export const DeviceList = ({
         {devices
           // Sort them by connected status and mac address
           .toSorted((a, b) => {
-            if (a.connected !== b.connected) {
-              return a.connected ? -1 : 1;
+            if (a.device.isOnline !== b.device.isOnline) {
+              return a.device.isOnline ? -1 : 1;
             }
-            return a.mac.localeCompare(b.mac);
+            return a.device.macAddress.localeCompare(b.device.macAddress);
           })
-          .map((device) => {
+          .map(({ device }) => {
             const DeviceIcon = getDeviceIcon();
 
             return (
               <div
-                key={device.mac}
+                key={device.macAddress}
                 className="p-4 rounded-lg border border-border bg-secondary/30 hover:bg-secondary/50 transition-colors"
               >
                 <div className="flex items-start justify-between">
@@ -157,24 +157,30 @@ export const DeviceList = ({
                         <h4
                           className={cn(
                             "font-medium text-card-foreground truncate",
-                            device.name === "" ? "italic" : "",
+                            device.displayName === "" ? "italic" : "",
                           )}
                         >
-                          {device.name === "" ? "(Unknown)" : device.name}
+                          {device.displayName === ""
+                            ? "(Unknown)"
+                            : device.displayName}
                         </h4>
                         <Badge className={getStatusColor(device)}>
-                          {device.connected ? "Connected" : "Disconnected"}
+                          {device.isOnline ? "Connected" : "Disconnected"}
                         </Badge>
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-muted-foreground mb-3">
                         <div>
                           <span className="font-medium">MAC:</span>{" "}
-                          <code className="text-primary">{device.mac}</code>
+                          <code className="text-primary">
+                            {device.macAddress}
+                          </code>
                         </div>
                         <div>
                           <span className="font-medium">IP:</span>{" "}
-                          <code className="text-primary">{device.ip}</code>
+                          <code className="text-primary">
+                            {device.lastKnownIp}
+                          </code>
                         </div>
                       </div>
 
