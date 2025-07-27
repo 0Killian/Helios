@@ -1,20 +1,20 @@
+use mac_address::MacAddress;
 use serde::Serialize;
+use sqlx::prelude::{FromRow, Type};
 use uuid::Uuid;
 
-use crate::MacAddress;
-
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, FromRow)]
 #[serde(rename_all = "camelCase")]
 pub struct Service {
-    id: Uuid,
-    device_mac: MacAddress,
-    display_name: String,
-    kind: ServiceKind,
-    is_managed: bool,
-    ports: Vec<ServicePort>,
+    pub service_id: Uuid,
+    pub device_mac: MacAddress,
+    pub display_name: String,
+    pub kind: ServiceKind,
+    pub is_managed: bool,
+    pub ports: Vec<ServicePort>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone, Copy, Type)]
 #[serde(rename_all = "kebab-case")]
 pub enum ServiceKind {
     HelloWorld,
@@ -23,19 +23,19 @@ pub enum ServiceKind {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ServicePort {
-    port: u16,
-    transport_protocol: TransportProtocol,
-    application_protocol: ApplicationProtocol,
-    is_online: bool,
+    pub port: u16,
+    pub transport_protocol: TransportProtocol,
+    pub application_protocol: ApplicationProtocol,
+    pub is_online: bool,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone, Copy, Type)]
 pub enum TransportProtocol {
     TCP,
     UDP,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone, Copy, Type)]
 pub enum ApplicationProtocol {
     HTTP,
 }

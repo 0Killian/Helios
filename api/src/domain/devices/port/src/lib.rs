@@ -1,6 +1,7 @@
 use devices_adapter::DevicesAdapter;
-use entities::{Device, MacAddress, Pagination, Service, SharedReference};
+use entities::{Device, Pagination, Service, SharedReference};
 use ip_api_adapter::InternetProviderApiAdapter;
+use mac_address::MacAddress;
 
 pub struct DevicesPort {
     ip_api: SharedReference<dyn InternetProviderApiAdapter>,

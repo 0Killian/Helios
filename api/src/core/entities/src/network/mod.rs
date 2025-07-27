@@ -2,10 +2,6 @@ use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
 use serde::Serialize;
 
-mod mac_address;
-
-pub use mac_address::*;
-
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WanStats {

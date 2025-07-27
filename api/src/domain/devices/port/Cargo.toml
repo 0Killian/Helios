@@ -9,3 +9,4 @@ async-trait.workspace = true
 tokio.workspace = true
 devices-adapter.workspace = true
 entities.workspace = true
+mac_address.workspace = true

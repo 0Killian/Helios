@@ -6,3 +6,4 @@ edition = "2024"
 [dependencies]
 entities.workspace = true
 async-trait.workspace = true
+mac_address.workspace = true

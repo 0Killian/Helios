@@ -1,0 +1,91 @@
+use entities::{ApplicationProtocol, Service, ServiceKind, ServicePort, TransportProtocol};
+use itertools::Itertools;
+use repositories_adapter::ServicesRepositoryAdapter;
+use sqlx::{PgConnection, Postgres, prelude::FromRow, types::mac_address::MacAddress};
+use uuid::Uuid;
+
+pub struct ServicesRepositoryPort {}
+
+#[derive(FromRow)]
+struct ServiceWithPort {
+    pub service_id: Uuid,
+    pub service_device_mac: MacAddress,
+    pub service_display_name: String,
+    pub service_kind: ServiceKind,
+    pub service_is_managed: bool,
+    #[sqlx(try_from = "i64")]
+    pub port_port: u16,
+    pub port_transport_protocol: TransportProtocol,
+    pub port_application_protocol: ApplicationProtocol,
+    pub port_is_online: bool,
+}
+
+fn service_with_port_group_to_service(services_with_port: Vec<&ServiceWithPort>) -> Service {
+    let mut service = Service {
+        service_id: services_with_port[0].service_id,
+        device_mac: services_with_port[0].service_device_mac,
+        display_name: services_with_port[0].service_display_name.clone(),
+        kind: services_with_port[0].service_kind,
+        is_managed: services_with_port[0].service_is_managed,
+        ports: Vec::new(),
+    };
+
+    for service_with_port in services_with_port {
+        service.ports.push(ServicePort {
+            port: service_with_port.port_port,
+            transport_protocol: service_with_port.port_transport_protocol,
+            application_protocol: service_with_port.port_application_protocol,
+            is_online: service_with_port.port_is_online,
+        });
+    }
+
+    service
+}
+
+#[async_trait::async_trait]
+impl ServicesRepositoryAdapter for ServicesRepositoryPort {
+    async fn fetch_all_of_device(
+        &self,
+        connection: &mut PgConnection,
+        mac_address: MacAddress,
+    ) -> Vec<Service> {
+        sqlx::query_as::<Postgres, ServiceWithPort>(
+            r#"
+            SELECT * FROM core.services s
+            INNER JOIN core.service_ports sp ON s.service_id = sp.service_id
+            WHERE mac_address = $1
+        "#,
+        )
+        .bind(mac_address)
+        .fetch_all(connection)
+        .await
+        .unwrap()
+        .iter()
+        .chunk_by(|service| service.service_id)
+        .into_iter()
+        .map(|chunk| service_with_port_group_to_service(chunk.1.collect_vec()))
+        .collect()
+    }
+
+    async fn fetch_one(&self, connection: &mut PgConnection, service_id: Uuid) -> Option<Service> {
+        let services = sqlx::query_as::<Postgres, ServiceWithPort>(
+            r#"
+            SELECT * FROM core.services s
+            INNER JOIN core.service_ports sp ON s.service_id = sp.service_id
+            WHERE service_id = $1
+        "#,
+        )
+        .bind(service_id)
+        .fetch_all(connection)
+        .await
+        .unwrap();
+
+        if services.len() == 0 {
+            None
+        } else {
+            Some(service_with_port_group_to_service(
+                services.iter().collect_vec(),
+            ))
+        }
+    }
+}

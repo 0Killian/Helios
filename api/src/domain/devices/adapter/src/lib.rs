@@ -1,4 +1,5 @@
-use entities::{Device, MacAddress, Pagination, Service};
+use entities::{Device, Pagination, Service};
+use mac_address::MacAddress;
 
 #[async_trait::async_trait]
 pub trait DevicesAdapter: Send {

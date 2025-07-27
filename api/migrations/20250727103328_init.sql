@@ -17,7 +17,7 @@ create table core.devices (
 
 -- Stores the abstract service
 create table core.services (
-    id uuid primary key default uuid_generate_v7(),
+    service_id uuid primary key default uuid_generate_v7(),
     device_mac macaddr not null references core.devices(mac_address) on delete cascade,
     display_name varchar(255) not null, -- user-defined name for the service
     kind varchar(255) not null, -- type of service (e.g., DNS, Web, SSH, Mail, ...)

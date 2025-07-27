@@ -1,10 +1,10 @@
 use std::net::IpAddr;
 
+use mac_address::MacAddress;
 use serde::Serialize;
+use sqlx::FromRow;
 
-use crate::MacAddress;
-
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, FromRow)]
 #[serde(rename_all = "camelCase")]
 pub struct Device {
     pub mac_address: MacAddress,
