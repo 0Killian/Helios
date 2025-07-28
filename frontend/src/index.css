@@ -1,9 +1,9 @@
 @import "tailwindcss";
+@plugin "tailwindcss-animate";
 
 /* Definition of the design system. All colors, gradients, fonts, etc should be defined here.
 All colors MUST be HSL.
 */
-
 @theme {
     --color-background: hsl(218 23% 6%);
     --color-foreground: hsl(220 15% 95%);
@@ -53,11 +53,12 @@ All colors MUST be HSL.
 
 @layer base {
     * {
-        border-color: hsl(var(--color-border));
+        border-color: var(--color-border);
+        scrollbar-color: var(--color-secondary) transparent;
     }
 
     :root {
-        background-color: hsl(var(--color-background));
-        color: hsl(var(--color-foreground));
+        background-color: var(--color-background);
+        color: var(--color-foreground);
     }
 }
