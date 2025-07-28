@@ -1,5 +1,6 @@
 mod fetch_network_status;
 mod list_devices;
+mod list_service_templates;
 mod list_services;
 mod sync_devices;
 
@@ -7,6 +8,7 @@ use std::time::Instant;
 
 pub use fetch_network_status::*;
 pub use list_devices::*;
+pub use list_service_templates::*;
 pub use list_services::*;
 pub use sync_devices::*;
 

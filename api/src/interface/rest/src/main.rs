@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use axum_distributed_routing::{create_router, route_group};
 use common::{CONFIG, InternetProvider};
-use domain::{FetchNetworkStatusUseCase, ListDevicesUseCase};
+use domain::{FetchNetworkStatusUseCase, ListDevicesUseCase, ListServiceTemplatesUseCase};
 use internet_provider_api::bouygues::BboxInternetProviderApi;
 use ports::repositories::{DevicesRepository, ServicesRepository, UnitOfWorkProvider};
 use repositories::{PostgresDevicesRepository, PostgresServicesRepository, PostgresUWP};
@@ -18,6 +18,7 @@ where
 {
     list_devices: ListDevicesUseCase<DR, SR, UWP>,
     fetch_network_status: FetchNetworkStatusUseCase,
+    list_service_templates: ListServiceTemplatesUseCase,
 }
 
 type PostgresAppState =
@@ -28,6 +29,7 @@ route_group!(pub RestV1, PostgresAppState, Base, "/api/v1");
 
 mod devices;
 mod network;
+mod service_templates;
 
 #[tokio::main]
 async fn main() {
@@ -50,6 +52,7 @@ async fn main() {
     let app_state = AppState {
         list_devices: ListDevicesUseCase::new(unit_of_work_provider.clone()),
         fetch_network_status: FetchNetworkStatusUseCase::new(internet_provider_api),
+        list_service_templates: ListServiceTemplatesUseCase,
     };
 
     let router = create_router!(Base).with_state(app_state).layer(

@@ -39,3 +39,33 @@ pub enum TransportProtocol {
 pub enum ApplicationProtocol {
     HTTP,
 }
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ServiceTemplate {
+    pub kind: ServiceKind,
+    pub ports: Vec<ServicePortTemplate>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ServicePortTemplate {
+    pub port: u16,
+    pub transport_protocol: TransportProtocol,
+    pub application_protocol: ApplicationProtocol,
+}
+
+impl From<ServiceKind> for ServiceTemplate {
+    fn from(kind: ServiceKind) -> Self {
+        match kind {
+            ServiceKind::HelloWorld => ServiceTemplate {
+                kind,
+                ports: vec![ServicePortTemplate {
+                    port: 80,
+                    transport_protocol: TransportProtocol::TCP,
+                    application_protocol: ApplicationProtocol::HTTP,
+                }],
+            },
+        }
+    }
+}
