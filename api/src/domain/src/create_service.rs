@@ -4,6 +4,21 @@ use entities::{Service, ServiceKind, ServicePort, ServicePortTemplate, ServiceTe
 use mac_address::MacAddress;
 use ports::repositories::{ServicesRepository, UnitOfWorkProvider};
 use serde::Deserialize;
+use thiserror::Error;
+
+#[derive(Error, Debug, PartialEq, Eq)]
+pub enum CreateServiceError {
+    #[error("Duplicate port number")]
+    DuplicatePortNumber,
+    #[error("Duplicate port type")]
+    DuplicatePortType,
+    #[error("Missing required ports")]
+    MissingRequiredPorts,
+    #[error("Invalid port configuration")]
+    InvalidPortConfiguration,
+    #[error("Service already exists")]
+    ServiceAlreadyExists,
+}
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -15,13 +30,13 @@ pub struct CreateService {
 }
 
 impl CreateService {
-    fn validate(&self) -> Result<(), &'static str> {
+    fn validate(&self) -> Option<CreateServiceError> {
         let template = ServiceTemplate::from(self.kind);
 
         let mut port_numbers = HashSet::new();
         for port in &self.ports {
             if !port_numbers.insert(port.port) {
-                return Err("Duplicate port number");
+                return Some(CreateServiceError::DuplicatePortNumber);
             }
         }
 
@@ -50,25 +65,27 @@ impl CreateService {
             .collect();
 
         if input_port_types.len() != self.ports.len() {
-            return Err("Duplicate port type");
+            return Some(CreateServiceError::DuplicatePortNumber);
         }
 
         if input_port_types.len() != template_port_types.len() {
-            return Err("Missing required ports");
+            return Some(CreateServiceError::DuplicatePortNumber);
         }
 
         if template_port_types != input_port_types {
-            return Err("Invalid port configuration");
+            return Some(CreateServiceError::InvalidPortConfiguration);
         }
 
-        Ok(())
+        None
     }
 }
 
-impl Into<Service> for CreateService {
-    fn into(self) -> Service {
-        if let Err(e) = self.validate() {
-            panic!("{}", e);
+impl TryInto<Service> for CreateService {
+    type Error = CreateServiceError;
+
+    fn try_into(self) -> Result<Service, Self::Error> {
+        if let Some(e) = self.validate() {
+            return Err(e);
         }
 
         let template = ServiceTemplate::from(self.kind);
@@ -110,7 +127,7 @@ impl Into<Service> for CreateService {
             })
             .collect();
 
-        Service {
+        Ok(Service {
             service_id: uuid::Uuid::now_v7(),
             device_mac: self.device_mac,
             display_name: self.display_name,
@@ -118,7 +135,7 @@ impl Into<Service> for CreateService {
             is_managed: true,
             ports: service_ports,
             token: common::generate_token(),
-        }
+        })
     }
 }
 
@@ -136,7 +153,7 @@ impl<SR: ServicesRepository<UWP>, UWP: UnitOfWorkProvider> CreateServiceUseCase<
         }
     }
 
-    pub async fn execute(&self, service: CreateService) -> Service {
+    pub async fn execute(&self, service: CreateService) -> Result<Service, CreateServiceError> {
         let mut uow = self.uow_provider.begin_transaction().await;
 
         if SR::find_one(&mut uow, service.device_mac, service.kind, &service.ports)
@@ -146,10 +163,10 @@ impl<SR: ServicesRepository<UWP>, UWP: UnitOfWorkProvider> CreateServiceUseCase<
             panic!("Service already exists");
         }
 
-        let service: Service = service.into();
+        let service: Service = service.try_into()?;
 
         SR::create(&mut uow, service.clone()).await;
         self.uow_provider.commit(uow).await;
-        service
+        Ok(service)
     }
 }
