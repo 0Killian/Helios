@@ -54,15 +54,6 @@ pub struct ServicePortTemplate {
     pub application_protocol: ApplicationProtocol,
 }
 
-impl ServicePortTemplate {
-    pub fn matches(&self, port: &ServicePort) -> bool {
-        self.port == port.port
-            && self.transport_protocol == port.transport_protocol
-            && self.application_protocol == port.application_protocol
-            && self.name == port.name
-    }
-}
-
 impl From<ServiceKind> for ServiceTemplate {
     fn from(kind: ServiceKind) -> Self {
         match kind {

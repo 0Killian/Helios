@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{collections::HashSet, str::FromStr};
 
 use entities::{
     ApplicationProtocol, Service, ServiceKind, ServicePort, ServicePortTemplate, TransportProtocol,
@@ -172,15 +172,32 @@ impl ServicesRepository<PostgresUWP> for PostgresServicesRepository {
 
         // Check that the ports are the same
         for service in services {
-            let mut ports_match = true;
-            for port in ports {
-                if service.ports.iter().all(|p| port.matches(p)) {
-                    ports_match = false;
-                    break;
-                }
-            }
+            let existing_ports_set: HashSet<_> = service
+                .ports
+                .iter()
+                .map(|port| {
+                    (
+                        port.port,
+                        &port.name,
+                        port.transport_protocol,
+                        port.application_protocol,
+                    )
+                })
+                .collect();
 
-            if ports_match {
+            let input_ports_set: HashSet<_> = ports
+                .iter()
+                .map(|port| {
+                    (
+                        port.port,
+                        &port.name,
+                        port.transport_protocol,
+                        port.application_protocol,
+                    )
+                })
+                .collect();
+
+            if existing_ports_set == input_ports_set {
                 return Some(service);
             }
         }
