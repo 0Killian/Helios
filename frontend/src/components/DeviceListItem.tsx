@@ -18,12 +18,21 @@ import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/Dialog";
 import { formatDistanceToNow } from "date-fns";
 import { Computer, MoreVertical } from "lucide-react";
 import { AddServiceDialog } from "./dialogs/AddServiceDialog";
+import { useState } from "react";
 
 interface DeviceListItemProps {
   device: Device;
+  onRefresh?: () => void;
 }
 
-export function DeviceListItem({ device }: DeviceListItemProps) {
+export function DeviceListItem({ device, onRefresh }: DeviceListItemProps) {
+  const [isAddServiceDialogOpen, setIsAddServiceDialogOpen] = useState(false);
+
+  const onAddServiceComplete = () => {
+    setIsAddServiceDialogOpen(false);
+    onRefresh?.();
+  };
+
   return (
     <Card className="border-border bg-secondary/30 hover:bg-secondary/50 transition-all duration-100">
       <CardHeader>
@@ -45,14 +54,20 @@ export function DeviceListItem({ device }: DeviceListItemProps) {
             <Badge variant={device.isOnline ? "success" : "destructive"}>
               {device.isOnline ? "Online" : "Offline"}
             </Badge>
-            <Dialog>
+            <Dialog
+              open={isAddServiceDialogOpen}
+              onOpenChange={setIsAddServiceDialogOpen}
+            >
               <DialogTrigger asChild>
                 <Button variant="outline" size="sm">
                   Add Service
                 </Button>
               </DialogTrigger>
               <DialogContent>
-                <AddServiceDialog device={device} />
+                <AddServiceDialog
+                  device={device}
+                  onClose={onAddServiceComplete}
+                />
               </DialogContent>
             </Dialog>
             <DropdownMenu modal={false}>

@@ -1,4 +1,4 @@
-use entities::Service;
+use entities::{Service, ServiceKind, ServicePortTemplate};
 use mac_address::MacAddress;
 use uuid::Uuid;
 
@@ -15,6 +15,12 @@ where
     ) -> Vec<Service>;
 
     async fn fetch_one<'a>(uow: &'a mut UWP::UnitOfWork<'_>, service_id: Uuid) -> Option<Service>;
+    async fn find_one<'a>(
+        uow: &'a mut UWP::UnitOfWork<'_>,
+        mac_address: MacAddress,
+        kind: ServiceKind,
+        ports: &[ServicePortTemplate],
+    ) -> Option<Service>;
     async fn create<'a>(uow: &'a mut UWP::UnitOfWork<'_>, service: Service);
     async fn update<'a>(uow: &'a mut UWP::UnitOfWork<'_>, service: Service);
 }

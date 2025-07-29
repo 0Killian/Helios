@@ -2,7 +2,7 @@ export interface Service {
   serviceId: string;
   deviceMac: string;
   displayName: string;
-  kind: ServiceKind;
+  kind: string;
   isManaged: boolean;
   ports: ServicePort[];
 }
@@ -14,6 +14,5 @@ export interface ServicePort {
   isOnline: boolean;
 }
 
-type ServiceKind = "hello-world";
-type TransportProtocol = "TCP" | "UDP";
-type ApplicationProtocol = "HTTP";
+export type TransportProtocol = "TCP" | "UDP";
+export type ApplicationProtocol = "HTTP";

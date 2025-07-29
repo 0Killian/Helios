@@ -2,11 +2,13 @@ import { JSX, useState } from "react";
 import { DialogDescription, DialogHeader, DialogTitle } from "../ui/Dialog";
 import { cn } from "@/lib";
 import { Button } from "../ui/Button";
+import { Loader2 } from "lucide-react";
 
 export interface Step {
   id: number;
-  title: string;
-  content: (step: Step) => JSX.Element;
+  content: JSX.Element;
+  back: boolean;
+  onNext?: () => Promise<boolean>;
 }
 
 export const StepperDialog = ({
@@ -19,9 +21,19 @@ export const StepperDialog = ({
   steps: Step[];
 }) => {
   const [currentStep, setCurrentStep] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleNext = () => {
-    setCurrentStep((prev) => Math.min(prev + 1, steps.length));
+  const handleNext = async () => {
+    if (steps[currentStep - 1].onNext) {
+      setIsLoading(true);
+      const success = await steps[currentStep - 1].onNext!();
+      setIsLoading(false);
+      if (success) {
+        setCurrentStep((prev) => Math.min(prev + 1, steps.length));
+      }
+    } else {
+      setCurrentStep((prev) => Math.min(prev + 1, steps.length));
+    }
   };
 
   const handleBack = () => {
@@ -58,25 +70,23 @@ export const StepperDialog = ({
             </div>
           ))}
         </div>
-        <div className="mt-6 min-h-[150px] flex flex-col w-full">
-          <div className="flex-grow relative overflow-hidden">
-            {steps.map((step) => (
-              <div
-                className={cn(
-                  "absolute w-full h-full transition-transform duration-200 ease-in-out",
-                  currentStep === step.id
-                    ? "translate-x-0"
-                    : step.id < currentStep
-                      ? "-translate-x-full"
-                      : "translate-x-full",
-                )}
-              >
-                {step.content(step)}
-              </div>
-            ))}
+        <div className="mt-6 flex flex-col w-full">
+          <div className="overflow-hidden">
+            <div
+              className="flex transition-transform duration-300 ease-in-out"
+              style={{
+                transform: `translateX(-${(currentStep - 1) * 100}%)`,
+              }}
+            >
+              {steps.map((step) => (
+                <div key={step.id} className="w-full flex-shrink-0">
+                  {step.content}
+                </div>
+              ))}
+            </div>
           </div>
           <div className="flex justify-between mt-8 w-full">
-            {currentStep > 1 ? (
+            {currentStep > 1 && steps[currentStep - 1].back ? (
               <Button variant="outline" onClick={handleBack}>
                 Back
               </Button>
@@ -84,7 +94,26 @@ export const StepperDialog = ({
               <div /> // Empty div to keep "Next" button on the right
             )}
             {currentStep < steps.length && (
-              <Button onClick={handleNext}>Next</Button>
+              <Button onClick={handleNext}>
+                Next
+                <Loader2
+                  className={cn(
+                    "ml-2 h-4 w-4 animate-spin",
+                    !isLoading ? "hidden" : "",
+                  )}
+                />
+              </Button>
+            )}
+            {currentStep === steps.length && (
+              <Button onClick={handleNext}>
+                Finish
+                <Loader2
+                  className={cn(
+                    "ml-2 h-4 w-4 animate-spin",
+                    !isLoading ? "hidden" : "",
+                  )}
+                />
+              </Button>
             )}
           </div>
         </div>

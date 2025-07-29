@@ -5,6 +5,10 @@ pub struct ListServiceTemplatesUseCase;
 
 impl ListServiceTemplatesUseCase {
     pub async fn execute(&self) -> Vec<ServiceTemplate> {
-        vec![ServiceKind::HelloWorld.into()]
+        ServiceKind::variants()
+            .into_iter()
+            .cloned()
+            .map(Into::into)
+            .collect()
     }
 }

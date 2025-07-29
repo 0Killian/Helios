@@ -1,26 +1,87 @@
-use std::str::FromStr;
+use std::{net::IpAddr, str::FromStr};
 
+use config_macro::config;
 use strum::EnumString;
 use url::Url;
 
-pub struct Config {
-    pub internet_provider: InternetProviderConfig,
-    pub database: DatabaseConfig,
-    pub scanning: ScanningConfig,
+trait FromEnv {
+    fn from_env(key: &str, default: Option<&str>) -> Self;
 }
 
-pub struct InternetProviderConfig {
-    pub kind: InternetProvider,
+impl<T> FromEnv for T
+where
+    T: FromStr,
+    <T as FromStr>::Err: std::fmt::Debug,
+{
+    fn from_env(key: &str, default: Option<&str>) -> Self {
+        std::env::var(key)
+            .ok()
+            .as_deref()
+            .or(default)
+            .expect(&format!("Missing environment variable: {}", key))
+            .parse()
+            .expect(&format!("Failed to parse environment variable: {}", key))
+    }
+}
+
+#[config]
+pub struct Config {
+    #[env("")]
+    pub api: ApiConfig,
+    #[env("INTERNET_PROVIDER")]
+    pub internet_provider: InternetProviderConfig,
+    #[env("DATABASE")]
+    pub database: DatabaseConfig,
+    #[env("SCANNING")]
+    pub scanning: ScanningConfig,
+    #[env("AGENT")]
+    pub agents: AgentsConfig,
+}
+
+#[config]
+pub struct ApiConfig {
+    #[env("LISTEN_ADDRESS", default = "0.0.0.0")]
+    pub listen_address: IpAddr,
+    #[env("LISTEN_PORT", default = "3000")]
+    pub listen_port: u16,
+    #[env("BASE_URL", default = "http://localhost:3000")]
     pub base_url: Url,
+}
+
+#[config]
+pub struct InternetProviderConfig {
+    #[env("KIND")]
+    pub kind: InternetProvider,
+    #[env("BASE_URL")]
+    pub base_url: Url,
+    #[env("PASSWORD")]
     pub password: String,
 }
 
+#[config]
 pub struct DatabaseConfig {
+    #[env("URL")]
     pub url: Url,
 }
 
+#[config]
 pub struct ScanningConfig {
+    #[env("DEVICE_SCAN_DELAY", default = "60")]
     pub device_scan_delay: u64,
+}
+
+#[config]
+pub struct AgentsConfig {
+    #[env("HELLO_WORLD")]
+    pub hello_world: BaseAgentConfig,
+    #[env("HELLO_WORLD2")]
+    pub hello_world2: BaseAgentConfig,
+}
+
+#[config]
+pub struct BaseAgentConfig {
+    #[env("DOWNLOAD_BASE_URL")]
+    pub download_base_url: String,
 }
 
 #[derive(EnumString)]
@@ -29,38 +90,7 @@ pub enum InternetProvider {
     Bouygues,
 }
 
-impl Config {
-    pub fn from_env() -> Self {
-        dotenv::dotenv().ok();
-        let base_url = Url::parse(
-            &std::env::var("INTERNET_PROVIDER_BASE_URL")
-                .expect("INTERNET_PROVIDER_BASE_URL must be set"),
-        )
-        .expect("Invalid URL format for INTERNET_PROVIDER_BASE_URL");
-        let password = std::env::var("INTERNET_PROVIDER_PASSWORD")
-            .expect("INTERNET_PROVIDER_PASSWORD must be set");
-        let kind = InternetProvider::from_str(
-            &std::env::var("INTERNET_PROVIDER_KIND").expect("INTERNET_PROVIDER_KIND must be set"),
-        )
-        .expect("Invalid INTERNET_PROVIDER_KIND");
-        let database_url =
-            Url::parse(&std::env::var("DATABASE_URL").expect("DATABASE_URL must be set"))
-                .expect("Invalid URL format for DATABASE_URL");
-        let device_scan_delay = std::env::var("DEVICE_SCAN_DELAY_SECONDS")
-            .unwrap_or("30".to_string())
-            .parse()
-            .expect("Invalid DEVICE_SCAN_DELAY_SECONDS");
-
-        Self {
-            internet_provider: InternetProviderConfig {
-                base_url,
-                password,
-                kind,
-            },
-            database: DatabaseConfig { url: database_url },
-            scanning: ScanningConfig { device_scan_delay },
-        }
-    }
-}
-
-pub static CONFIG: std::sync::LazyLock<Config> = std::sync::LazyLock::new(|| Config::from_env());
+pub static CONFIG: std::sync::LazyLock<Config> = std::sync::LazyLock::new(|| {
+    dotenv::dotenv().ok();
+    Config::from_env("API", None)
+});
