@@ -2,8 +2,7 @@ import { DeviceList } from "@/components/DeviceList";
 import { NetworkStats } from "@/components/NetworkStats";
 import { WanIpDisplay } from "@/components/WanIpDisplay";
 import { fetchNetworkWanInfo, fetchDevices } from "@/features";
-import { useAppSelector } from "@/hooks";
-import { useAppDispatch } from "@/hooks/use-dispatch";
+import { useAppDispatch, useAppSelector } from "@/hooks";
 import { useEffect, useRef, useState } from "react";
 
 const Dashboard = () => {

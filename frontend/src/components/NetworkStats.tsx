@@ -77,7 +77,6 @@ export function NetworkStats({
   hasFailed: boolean;
   wan: NetworkWan | null;
 }) {
-  console.log(wan);
   if (!wan) {
     return (
       <div className="relative">

@@ -4,6 +4,7 @@ members = [
     "src/core/common",
     "src/core/entities",
     "src/core/ports",
+    "src/core/config_macro",
 
     # Interfaces are used by the clients of the API.
     "src/interface/rest",
@@ -24,6 +25,7 @@ ports = { path = "src/core/ports" }
 internet-provider-api = { path = "src/infrastructure/internet_provider_api" }
 repositories = { path = "src/infrastructure/repositories" }
 domain = { path = "src/domain" }
+config_macro = { path = "src/core/config_macro" }
 
 async-trait = "0.1.88"
 reqwest = { version = "0.12.22", features = ["json"] }
@@ -35,7 +37,7 @@ strum = { version = "0.27.2", features = ["derive"] }
 chrono = { version = "0.4.41", features = ["serde"] }
 serde_path_to_error = "0.1.17"
 url = "2.5.4"
-axum = { version = "0.8.4", features = ["json", "macros"] }
+axum = { version = "0.8.4", features = ["json", "macros", "ws"] }
 axum-distributed-routing = "0.1.3"
 dotenv = "0.15.0"
 tower-http = { version = "0.6.6", features = ["cors"] }
@@ -54,3 +56,7 @@ sqlx = { version = "0.8.6", features = [
 ] }
 mac_address = { version = "1.1.8", features = ["serde"] }
 itertools = "0.14.0"
+rand = "0.9.2"
+proc-macro2 = "1.0.95"
+quote = "1.0.40"
+syn = "2.0.104"

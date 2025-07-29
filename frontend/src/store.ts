@@ -1,11 +1,18 @@
 import { configureStore } from "@reduxjs/toolkit";
 
-import { networkSlice, devicesSlice } from "@/features";
+import {
+  networkSlice,
+  devicesSlice,
+  serviceTemplatesSlice,
+  servicesSlice,
+} from "@/features";
 
 export const store = configureStore({
   reducer: {
     [networkSlice.name]: networkSlice.reducer,
     [devicesSlice.name]: devicesSlice.reducer,
+    [serviceTemplatesSlice.name]: serviceTemplatesSlice.reducer,
+    [servicesSlice.name]: servicesSlice.reducer,
   },
 });
 

@@ -73,3 +73,14 @@ export function formatDuration(totalSeconds: number): string {
 
   return parts.join(" ");
 }
+
+/**
+ * Converts a kebab-case string to a human-readable string.
+ * @param kebabCaseString The kebab-case string to convert.
+ * @returns A formatted string like "Kebab Case String".
+ */
+export function formatKebabCaseString(kebabCaseString: string): string {
+  return kebabCaseString
+    .replace(/-/g, " ")
+    .replace(/\b\w/g, (match) => match.toUpperCase());
+}

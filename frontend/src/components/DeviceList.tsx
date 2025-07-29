@@ -1,17 +1,11 @@
 import { Card } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/DropdownMenu";
-import { Monitor, ChevronDown, AlertTriangle } from "lucide-react";
-import { Device, DeviceFull } from "@/models";
+
+import { Monitor, AlertTriangle } from "lucide-react";
+import { DeviceFull } from "@/models";
 import { cn } from "@/lib";
 import { Skeleton } from "./ui/Skeleton";
 import { RootState } from "@/store";
+import { DeviceListItem } from "./DeviceListItem";
 
 const DeviceListSkeleton = () => {
   return (
@@ -62,35 +56,6 @@ export const DeviceList = ({
   hasFailed: boolean;
   status: RootState["devices"]["status"];
 }) => {
-  const getDeviceIcon = () => {
-    // TODO: device type
-    return Monitor;
-  };
-
-  const getStatusColor = (device: Device) => {
-    return device.isOnline
-      ? "bg-success text-success-foreground"
-      : "bg-muted text-muted-foreground";
-  };
-
-  /*const getServiceStatusColor = (status: string) => {
-    switch (status) {
-      case "running":
-        return "text-success";
-      case "stopped":
-        return "text-destructive";
-      default:
-        return "text-muted-foreground";
-    }
-  };*/
-
-  // const handleServiceControl = (macAddress: string, port: number) => {
-  //   // In real app, this would navigate to service control panel
-  //   console.log(
-  //     `Opening control panel for service on port ${port} on device ${macAddress}`,
-  //   );
-  // };
-
   if (devices.length === 0 && status !== "succeeded") {
     return (
       <div className="relative">
@@ -129,7 +94,7 @@ export const DeviceList = ({
         </div>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-4 max-h-[60vh] overflow-y-auto">
         {devices
           // Sort them by connected status and mac address
           .toSorted((a, b) => {
@@ -138,131 +103,9 @@ export const DeviceList = ({
             }
             return a.device.macAddress.localeCompare(b.device.macAddress);
           })
-          .map(({ device }) => {
-            const DeviceIcon = getDeviceIcon();
-
-            return (
-              <div
-                key={device.macAddress}
-                className="p-4 rounded-lg border border-border bg-secondary/30 hover:bg-secondary/50 transition-colors"
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start gap-3 flex-1">
-                    <div className="p-2 rounded-lg bg-primary/10 mt-1">
-                      <DeviceIcon className="h-4 w-4 text-primary" />
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-2">
-                        <h4
-                          className={cn(
-                            "font-medium text-card-foreground truncate",
-                            device.displayName === "" ? "italic" : "",
-                          )}
-                        >
-                          {device.displayName === ""
-                            ? "(Unknown)"
-                            : device.displayName}
-                        </h4>
-                        <Badge className={getStatusColor(device)}>
-                          {device.isOnline ? "Connected" : "Disconnected"}
-                        </Badge>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-muted-foreground mb-3">
-                        <div>
-                          <span className="font-medium">MAC:</span>{" "}
-                          <code className="text-primary">
-                            {device.macAddress}
-                          </code>
-                        </div>
-                        <div>
-                          <span className="font-medium">IP:</span>{" "}
-                          <code className="text-primary">
-                            {device.lastKnownIp}
-                          </code>
-                        </div>
-                      </div>
-
-                      <div className="text-xs text-muted-foreground">
-                        Last seen: {new Date(device.lastSeen).toLocaleString()}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 ml-4">
-                    <DropdownMenu modal={false}>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="sm">
-                          Services
-                          <ChevronDown className="h-3 w-3 ml-1" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-64">
-                        <DropdownMenuItem
-                          className="flex items-center justify-between p-3"
-                          disabled
-                        >
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium">
-                                No services found
-                              </span>
-                            </div>
-                          </div>
-                        </DropdownMenuItem>
-                        {/*{device.services.map((service, index) => (
-                        <div key={index}>
-                          <DropdownMenuItem className="flex items-center justify-between p-3">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium">
-                                  {service.name}
-                                </span>
-                                <span
-                                  className={`text-xs ${getServiceStatusColor(service.status)}`}
-                                >
-                                  ●
-                                </span>
-                              </div>
-                              <div className="text-xs text-muted-foreground">
-                                Port {service.port} • {service.status}
-                              </div>
-                            </div>
-
-                            {service.controllable && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() =>
-                                  handleServiceControl(device.id, service)
-                                }
-                                className="ml-2"
-                              >
-                                {service.name === "DNS" && (
-                                  <Shield className="h-3 w-3" />
-                                )}
-                                {service.name === "Database" && (
-                                  <Database className="h-3 w-3" />
-                                )}
-                                {!["DNS", "Database"].includes(
-                                  service.name,
-                                ) && <Settings className="h-3 w-3" />}
-                              </Button>
-                            )}
-                          </DropdownMenuItem>
-                          {index < device.services.length - 1 && (
-                            <DropdownMenuSeparator />
-                          )}
-                        </div>
-                      ))}*/}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+          .map(({ device }) => (
+            <DeviceListItem key={device.macAddress} device={device} />
+          ))}
       </div>
     </Card>
   );
