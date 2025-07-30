@@ -1,9 +1,9 @@
 use std::{sync::Arc, time::Instant};
 
-use common::{CONFIG, InternetProvider};
+use common::{CONFIG, RouterKind};
 use domain::{PeriodicUseCase, SyncDevicesUseCase};
-use internet_provider_api::bouygues::BboxInternetProviderApi;
 use repositories::{PostgresDevicesRepository, PostgresUWP};
+use router_api::bouygues::BboxRouterApi;
 use sqlx::PgPool;
 use tokio::sync::Mutex;
 
@@ -24,19 +24,19 @@ impl CronJob {
 }
 
 #[tokio::main]
-async fn main() {
-    let internet_provider_api = Arc::new(match CONFIG.internet_provider.kind {
-        InternetProvider::Bouygues => {
-            BboxInternetProviderApi::new(
-                CONFIG.internet_provider.base_url.clone(),
-                CONFIG.internet_provider.password.clone(),
+async fn main() -> anyhow::Result<()> {
+    let router_api = Arc::new(match CONFIG.router_api.kind {
+        RouterKind::Bbox => {
+            BboxRouterApi::new(
+                CONFIG.router_api.base_url.clone(),
+                CONFIG.router_api.password.clone(),
             )
-            .await
+            .await?
         }
     });
 
     let pg_pool = Arc::new(Mutex::new(
-        PgPool::connect(CONFIG.database.url.as_str()).await.unwrap(),
+        PgPool::connect(CONFIG.database.url.as_str()).await?,
     ));
 
     let unit_of_work_provider = PostgresUWP::new(pg_pool);
@@ -45,13 +45,14 @@ async fn main() {
         PostgresDevicesRepository,
         PostgresUWP,
     >::new(
-        unit_of_work_provider,
-        internet_provider_api,
+        unit_of_work_provider, router_api
     )))];
 
     loop {
         let now = Instant::now();
-        let mut next_execution = jobs[0].next_execution.unwrap();
+        let mut next_execution = jobs[0]
+            .next_execution
+            .ok_or_else(|| anyhow::anyhow!("No next execution found"))?;
 
         for job in &mut jobs {
             if let Some(next_exec) = job.next_execution {

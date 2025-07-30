@@ -1,11 +1,11 @@
 use axum::{
     body::Body,
     extract::State,
-    http::{HeaderMap, HeaderValue},
+    http::{HeaderMap, Response, StatusCode, header},
     response::IntoResponse,
 };
 use axum_distributed_routing::route;
-use domain::{InstallationScript, OperatingSystem};
+use domain::{GenerateInstallScriptError, InstallationScript, OperatingSystem};
 use serde::Deserialize;
 use uuid::Uuid;
 
@@ -22,11 +22,22 @@ route!(
     path = "/{service_id:Uuid}/install-script",
     query = InstallScriptQuery,
 
-    async create_service(state: State<PostgresAppState>) -> impl IntoResponse {
-        let InstallationScript { content, file_format, file_name } = state.generate_install_script.execute(query.os, service_id).await;
+    async create_service(state: State<PostgresAppState>) -> Response<Body> {
+        let InstallationScript { content, file_format, file_name } = match state.generate_install_script.execute(query.os, service_id).await {
+            Ok(script) => script,
+            Err(GenerateInstallScriptError::ServiceNotFound) => return (
+                StatusCode::NOT_FOUND,
+                GenerateInstallScriptError::ServiceNotFound.to_string()
+            ).into_response(),
+            Err(GenerateInstallScriptError::DatabaseError(err)) => return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                err.to_string()
+            ).into_response(),
+        };
+
         let mut headers = HeaderMap::new();
-        headers.insert("Content-Type", HeaderValue::from_str(&file_format).unwrap());
-        headers.insert("Content-Disposition", format!("attachment; filename={}", file_name).parse().unwrap());
-        (headers, Body::from(content))
+        headers.insert(header::CONTENT_TYPE, file_format.parse().unwrap());
+        headers.insert(header::CONTENT_DISPOSITION, format!("attachment; filename={}", file_name).parse().unwrap());
+        (headers, Body::from(content)).into_response()
     }
 );

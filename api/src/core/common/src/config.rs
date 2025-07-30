@@ -28,8 +28,8 @@ where
 pub struct Config {
     #[env("")]
     pub api: ApiConfig,
-    #[env("INTERNET_PROVIDER")]
-    pub internet_provider: InternetProviderConfig,
+    #[env("ROUTER_API")]
+    pub router_api: RouterApiConfig,
     #[env("DATABASE")]
     pub database: DatabaseConfig,
     #[env("SCANNING")]
@@ -49,9 +49,9 @@ pub struct ApiConfig {
 }
 
 #[config]
-pub struct InternetProviderConfig {
+pub struct RouterApiConfig {
     #[env("KIND")]
-    pub kind: InternetProvider,
+    pub kind: RouterKind,
     #[env("BASE_URL")]
     pub base_url: Url,
     #[env("PASSWORD")]
@@ -86,8 +86,8 @@ pub struct BaseAgentConfig {
 
 #[derive(EnumString)]
 #[strum(serialize_all = "camelCase")]
-pub enum InternetProvider {
-    Bouygues,
+pub enum RouterKind {
+    Bbox,
 }
 
 pub static CONFIG: std::sync::LazyLock<Config> = std::sync::LazyLock::new(|| {

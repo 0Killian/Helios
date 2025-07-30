@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use entities::{Service, ServiceKind, ServicePort, ServicePortTemplate, ServiceTemplate};
 use mac_address::MacAddress;
-use ports::repositories::{ServicesRepository, UnitOfWorkProvider};
+use ports::repositories::{RepositoryError, ServicesRepository, UnitOfWorkProvider};
 use serde::Deserialize;
 use thiserror::Error;
 
@@ -18,6 +18,8 @@ pub enum CreateServiceError {
     InvalidPortConfiguration,
     #[error("Service already exists")]
     ServiceAlreadyExists,
+    #[error("A database error occurred: {0}.")]
+    DatabaseError(#[from] RepositoryError),
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -154,19 +156,28 @@ impl<SR: ServicesRepository<UWP>, UWP: UnitOfWorkProvider> CreateServiceUseCase<
     }
 
     pub async fn execute(&self, service: CreateService) -> Result<Service, CreateServiceError> {
-        let mut uow = self.uow_provider.begin_transaction().await;
+        let mut uow = self.uow_provider.begin_transaction().await?;
 
         if SR::find_one(&mut uow, service.device_mac, service.kind, &service.ports)
-            .await
+            .await?
             .is_some()
         {
-            panic!("Service already exists");
+            return Err(CreateServiceError::ServiceAlreadyExists);
         }
 
         let service: Service = service.try_into()?;
 
-        SR::create(&mut uow, service.clone()).await;
-        self.uow_provider.commit(uow).await;
+        match SR::create(&mut uow, service.clone()).await {
+            Ok(_) => (),
+            Err(RepositoryError::UniqueViolation) => {
+                // Should never happen???
+                println!("Unexpected unique violation when creating service");
+                return Err(CreateServiceError::ServiceAlreadyExists);
+            }
+            Err(err) => return Err(CreateServiceError::DatabaseError(err)),
+        }
+
+        self.uow_provider.commit(uow).await?;
         Ok(service)
     }
 }

@@ -1,5 +1,7 @@
 use entities::{FullDevice, Pagination};
-use ports::repositories::{DevicesRepository, ServicesRepository, UnitOfWorkProvider};
+use ports::repositories::{
+    DevicesRepository, RepositoryResult, ServicesRepository, UnitOfWorkProvider,
+};
 
 #[derive(Clone)]
 pub struct ListDevicesUseCase<
@@ -21,12 +23,16 @@ impl<DR: DevicesRepository<UWP>, SR: ServicesRepository<UWP>, UWP: UnitOfWorkPro
         }
     }
 
-    pub async fn execute(&self, pagination: Option<Pagination>, full: bool) -> Vec<FullDevice> {
-        let mut uow = self.uow_provider.begin_transaction().await;
-        let devices = DR::fetch_all(&mut uow, pagination).await;
+    pub async fn execute(
+        &self,
+        pagination: Option<Pagination>,
+        full: bool,
+    ) -> RepositoryResult<Vec<FullDevice>> {
+        let mut uow = self.uow_provider.begin_transaction().await?;
+        let devices = DR::fetch_all(&mut uow, pagination).await?;
 
         if devices.is_empty() {
-            return vec![];
+            return Ok(vec![]);
         }
 
         let mut devices = devices
@@ -40,10 +46,10 @@ impl<DR: DevicesRepository<UWP>, SR: ServicesRepository<UWP>, UWP: UnitOfWorkPro
         if full {
             for device in &mut devices {
                 device.services =
-                    Some(SR::fetch_all_of_device(&mut uow, device.device.mac_address).await);
+                    Some(SR::fetch_all_of_device(&mut uow, device.device.mac_address).await?);
             }
         }
 
-        devices
+        Ok(devices)
     }
 }

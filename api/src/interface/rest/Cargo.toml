@@ -8,7 +8,7 @@ common.workspace = true
 entities.workspace = true
 ports.workspace = true
 domain.workspace = true
-internet-provider-api.workspace = true
+router-api.workspace = true
 repositories.workspace = true
 
 tokio.workspace = true
@@ -20,3 +20,4 @@ futures.workspace = true
 sqlx.workspace = true
 uuid.workspace = true
 serde_json.workspace = true
+anyhow.workspace = true

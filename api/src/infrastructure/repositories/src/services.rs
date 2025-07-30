@@ -3,12 +3,11 @@ use std::{collections::HashSet, str::FromStr};
 use entities::{
     ApplicationProtocol, Service, ServiceKind, ServicePort, ServicePortTemplate, TransportProtocol,
 };
-use itertools::Itertools;
-use ports::repositories::{Repository, ServicesRepository};
+use ports::repositories::{Repository, RepositoryError, RepositoryResult, ServicesRepository};
 use sqlx::{PgConnection, Postgres, prelude::FromRow, types::mac_address::MacAddress};
 use uuid::Uuid;
 
-use crate::{PostgresUWP, PostgresUoW};
+use crate::{PostgresUWP, PostgresUoW, map_sqlx_error};
 
 #[derive(Clone)]
 pub struct PostgresServicesRepository;
@@ -29,12 +28,20 @@ struct ServiceWithPort {
     pub port_is_online: bool,
 }
 
-fn service_with_port_group_to_service(services_with_port: Vec<&ServiceWithPort>) -> Service {
+fn service_with_port_group_to_service(
+    services_with_port: &[ServiceWithPort],
+) -> RepositoryResult<Service> {
+    let map_parse_err = |field: &str, value: &str| {
+        println!("Failed to parse {} from {}", field, value);
+        RepositoryError::Unknown
+    };
+
     let mut service = Service {
         service_id: services_with_port[0].service_id,
         device_mac: services_with_port[0].service_device_mac,
         display_name: services_with_port[0].service_display_name.clone(),
-        kind: ServiceKind::from_str(&services_with_port[0].service_kind).unwrap(),
+        kind: ServiceKind::from_str(&services_with_port[0].service_kind)
+            .map_err(|_| map_parse_err("kind", &services_with_port[0].service_kind))?,
         is_managed: services_with_port[0].service_is_managed,
         token: services_with_port[0].service_token.clone(),
         ports: Vec::new(),
@@ -47,16 +54,26 @@ fn service_with_port_group_to_service(services_with_port: Vec<&ServiceWithPort>)
             transport_protocol: TransportProtocol::from_str(
                 &service_with_port.port_transport_protocol,
             )
-            .unwrap(),
+            .map_err(|_| {
+                map_parse_err(
+                    "transport_protocol",
+                    &service_with_port.port_transport_protocol,
+                )
+            })?,
             application_protocol: ApplicationProtocol::from_str(
                 &service_with_port.port_application_protocol,
             )
-            .unwrap(),
+            .map_err(|_| {
+                map_parse_err(
+                    "application_protocol",
+                    &service_with_port.port_application_protocol,
+                )
+            })?,
             is_online: service_with_port.port_is_online,
         });
     }
 
-    service
+    Ok(service)
 }
 
 impl Repository<PostgresUWP> for PostgresServicesRepository {}
@@ -66,7 +83,7 @@ impl ServicesRepository<PostgresUWP> for PostgresServicesRepository {
     async fn fetch_all_of_device<'a>(
         connection: &'a mut PostgresUoW<'_>,
         mac_address: MacAddress,
-    ) -> Vec<Service> {
+    ) -> RepositoryResult<Vec<Service>> {
         sqlx::query_as::<Postgres, ServiceWithPort>(
             r#"
             SELECT
@@ -89,18 +106,17 @@ impl ServicesRepository<PostgresUWP> for PostgresServicesRepository {
         .bind(mac_address)
         .fetch_all(connection as &'a mut PgConnection)
         .await
-        .unwrap()
-        .iter()
-        .chunk_by(|service| service.service_id)
+        .map_err(map_sqlx_error)?
+        .chunk_by(|s1, s2| s1.service_id == s2.service_id)
         .into_iter()
-        .map(|chunk| service_with_port_group_to_service(chunk.1.collect_vec()))
+        .map(|chunk| service_with_port_group_to_service(chunk))
         .collect()
     }
 
     async fn fetch_one<'a>(
         connection: &'a mut PostgresUoW<'_>,
         service_id: Uuid,
-    ) -> Option<Service> {
+    ) -> RepositoryResult<Service> {
         let services = sqlx::query_as::<Postgres, ServiceWithPort>(
             r#"
             SELECT
@@ -123,14 +139,12 @@ impl ServicesRepository<PostgresUWP> for PostgresServicesRepository {
         .bind(service_id)
         .fetch_all(connection as &'a mut PgConnection)
         .await
-        .unwrap();
+        .map_err(map_sqlx_error)?;
 
         if services.len() == 0 {
-            None
+            Err(RepositoryError::NotFound)
         } else {
-            Some(service_with_port_group_to_service(
-                services.iter().collect_vec(),
-            ))
+            Ok(service_with_port_group_to_service(&services)?)
         }
     }
 
@@ -139,7 +153,7 @@ impl ServicesRepository<PostgresUWP> for PostgresServicesRepository {
         mac_address: MacAddress,
         kind: ServiceKind,
         ports: &[ServicePortTemplate],
-    ) -> Option<Service> {
+    ) -> RepositoryResult<Option<Service>> {
         let services: Vec<Service> = sqlx::query_as::<Postgres, ServiceWithPort>(
             r#"
             SELECT
@@ -163,12 +177,11 @@ impl ServicesRepository<PostgresUWP> for PostgresServicesRepository {
         .bind(kind.to_string())
         .fetch_all(connection as &'a mut PgConnection)
         .await
-        .unwrap()
-        .iter()
-        .chunk_by(|service| service.service_id)
+        .map_err(map_sqlx_error)?
+        .chunk_by(|s1, s2| s1.service_id == s2.service_id)
         .into_iter()
-        .map(|chunk| service_with_port_group_to_service(chunk.1.collect_vec()))
-        .collect();
+        .map(|chunk| service_with_port_group_to_service(chunk))
+        .collect::<Result<Vec<_>, _>>()?;
 
         // Check that the ports are the same
         for service in services {
@@ -198,14 +211,17 @@ impl ServicesRepository<PostgresUWP> for PostgresServicesRepository {
                 .collect();
 
             if existing_ports_set == input_ports_set {
-                return Some(service);
+                return Ok(Some(service));
             }
         }
 
-        None
+        Ok(None)
     }
 
-    async fn create<'a>(connection: &'a mut PostgresUoW<'_>, service: Service) {
+    async fn create<'a>(
+        connection: &'a mut PostgresUoW<'_>,
+        service: Service,
+    ) -> RepositoryResult<()> {
         sqlx::query(
             r#"
             INSERT INTO core.services (
@@ -226,7 +242,7 @@ impl ServicesRepository<PostgresUWP> for PostgresServicesRepository {
         .bind(service.token)
         .execute((&mut *connection) as &mut PgConnection)
         .await
-        .unwrap();
+        .map_err(map_sqlx_error)?;
 
         for port in service.ports {
             sqlx::query(
@@ -249,11 +265,16 @@ impl ServicesRepository<PostgresUWP> for PostgresServicesRepository {
             .bind(port.is_online)
             .execute((&mut *connection) as &mut PgConnection)
             .await
-            .unwrap();
+            .map_err(map_sqlx_error)?;
         }
+
+        Ok(())
     }
 
-    async fn update<'a>(connection: &'a mut PostgresUoW<'_>, service: Service) {
+    async fn update<'a>(
+        connection: &'a mut PostgresUoW<'_>,
+        service: Service,
+    ) -> RepositoryResult<()> {
         sqlx::query(
             r#"
             UPDATE core.services
@@ -271,7 +292,7 @@ impl ServicesRepository<PostgresUWP> for PostgresServicesRepository {
         .bind(service.is_managed)
         .execute((&mut *connection) as &mut PgConnection)
         .await
-        .unwrap();
+        .map_err(map_sqlx_error)?;
 
         sqlx::query(
             r#"
@@ -281,7 +302,7 @@ impl ServicesRepository<PostgresUWP> for PostgresServicesRepository {
         .bind(service.service_id)
         .execute((&mut *connection) as &mut PgConnection)
         .await
-        .unwrap();
+        .map_err(map_sqlx_error)?;
 
         for port in service.ports {
             sqlx::query(
@@ -304,7 +325,9 @@ impl ServicesRepository<PostgresUWP> for PostgresServicesRepository {
             .bind(port.is_online)
             .execute((&mut *connection) as &mut PgConnection)
             .await
-            .unwrap();
+            .map_err(map_sqlx_error)?;
         }
+
+        Ok(())
     }
 }

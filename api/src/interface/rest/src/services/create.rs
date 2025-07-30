@@ -36,6 +36,7 @@ impl From<CreateServiceError> for ApiResponse<Service> {
                 err.to_string(),
                 StatusCode::CONFLICT,
             ),
+            CreateServiceError::DatabaseError(err) => err.into(),
         }
     }
 }

@@ -1,8 +1,8 @@
 use entities::{Device, Pagination, ToSql};
-use ports::repositories::{DevicesRepository, Repository};
+use ports::repositories::{DevicesRepository, Repository, RepositoryResult};
 use sqlx::{PgConnection, types::mac_address::MacAddress};
 
-use crate::{PostgresUWP, PostgresUoW};
+use crate::{PostgresUWP, PostgresUoW, map_sqlx_error};
 
 #[derive(Clone)]
 pub struct PostgresDevicesRepository;
@@ -14,28 +14,31 @@ impl DevicesRepository<PostgresUWP> for PostgresDevicesRepository {
     async fn fetch_all<'a>(
         connection: &'a mut PostgresUoW<'_>,
         pagination: Option<Pagination>,
-    ) -> Vec<Device> {
+    ) -> RepositoryResult<Vec<Device>> {
         sqlx::query_as(&format!(
             "SELECT * FROM core.devices {}",
             pagination.to_sql()
         ))
         .fetch_all(connection as &'a mut PgConnection)
         .await
-        .unwrap()
+        .map_err(map_sqlx_error)
     }
 
     async fn fetch_one<'a>(
         connection: &'a mut PostgresUoW<'_>,
         mac_address: MacAddress,
-    ) -> Option<Device> {
+    ) -> RepositoryResult<Option<Device>> {
         sqlx::query_as("SELECT * FROM core.devices WHERE mac_address = $1")
             .bind(mac_address)
             .fetch_optional(connection as &'a mut PgConnection)
             .await
-            .unwrap()
+            .map_err(map_sqlx_error)
     }
 
-    async fn create<'a>(connection: &'a mut PostgresUoW<'_>, device: Device) {
+    async fn create<'a>(
+        connection: &'a mut PostgresUoW<'_>,
+        device: Device,
+    ) -> RepositoryResult<()> {
         sqlx::query(
             r#"
             INSERT INTO core.devices (
@@ -60,10 +63,14 @@ impl DevicesRepository<PostgresUWP> for PostgresDevicesRepository {
         .bind(device.last_scanned)
         .execute(connection as &'a mut PgConnection)
         .await
-        .unwrap();
+        .map_err(map_sqlx_error)
+        .map(|_| ())
     }
 
-    async fn update<'a>(connection: &'a mut PostgresUoW<'_>, device: Device) {
+    async fn update<'a>(
+        connection: &'a mut PostgresUoW<'_>,
+        device: Device,
+    ) -> RepositoryResult<()> {
         sqlx::query(
             r#"
             UPDATE core.devices
@@ -87,6 +94,7 @@ impl DevicesRepository<PostgresUWP> for PostgresDevicesRepository {
         .bind(device.last_scanned)
         .execute(connection as &'a mut PgConnection)
         .await
-        .unwrap();
+        .map_err(map_sqlx_error)
+        .map(|_| ())
     }
 }
