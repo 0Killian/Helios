@@ -52,6 +52,11 @@ export const createService = createAsyncThunk<
         code: error.code,
         message: error.message,
       });
+    } else if (error instanceof Error) {
+      return thunkAPI.rejectWithValue({
+        code: "unknown-error",
+        message: error.message,
+      });
     }
     return thunkAPI.rejectWithValue({
       code: "unknown-error",

@@ -182,7 +182,7 @@ impl BboxRouterApi {
             .get("Set-Cookie")
             .ok_or(BboxRouterApiError::MissingField("Set-Cookie".to_string()))?
             .to_str()
-            .unwrap()
+            .map_err(|_| BboxRouterApiError::MissingField("auth-cookie".to_string()))?
             .to_string();
 
         Ok(())
