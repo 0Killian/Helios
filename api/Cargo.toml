@@ -14,7 +14,7 @@ members = [
 
     # Infrastructure is the API external services layer.
     "src/infrastructure/repositories",
-    "src/infrastructure/router_api", # API used to obtain information about the network and manage it
+    "src/infrastructure/router_api", "src/protocol", # API used to obtain information about the network and manage it
 ]
 resolver = "3"
 
