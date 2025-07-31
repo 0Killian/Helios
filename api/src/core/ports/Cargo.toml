@@ -8,3 +8,4 @@ entities.workspace = true
 async-trait.workspace = true
 uuid.workspace = true
 mac_address.workspace = true
+thiserror.workspace = true

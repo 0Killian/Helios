@@ -1,25 +1,25 @@
 use std::sync::Arc;
 
 use entities::NetworkStatus;
-use ports::api::InternetProviderApi;
+use ports::api::{RouterApi, RouterApiResult};
 
 #[derive(Clone)]
 pub struct FetchNetworkStatusUseCase {
-    provider_api: Arc<dyn InternetProviderApi>,
+    router_api: Arc<dyn RouterApi>,
 }
 
 impl FetchNetworkStatusUseCase {
-    pub fn new(provider_api: Arc<dyn InternetProviderApi>) -> Self {
-        Self { provider_api }
+    pub fn new(router_api: Arc<dyn RouterApi>) -> Self {
+        Self { router_api }
     }
 
-    pub async fn execute(&self) -> NetworkStatus {
-        let stats = self.provider_api.wan_stats().await;
-        let connectivity = self.provider_api.wan_connectivity().await;
+    pub async fn execute(&self) -> RouterApiResult<NetworkStatus> {
+        let stats = self.router_api.wan_stats().await?;
+        let connectivity = self.router_api.wan_connectivity().await?;
 
-        NetworkStatus {
+        Ok(NetworkStatus {
             stats,
             connectivity,
-        }
+        })
     }
 }

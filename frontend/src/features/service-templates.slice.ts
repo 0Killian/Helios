@@ -1,11 +1,12 @@
+import { apiClient, ApiError } from "@/api/apiClient";
 import { ServiceTemplate } from "@/models";
-import { RootState } from "@/store";
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
+import { SliceError } from ".";
 
 interface ServiceTemplatesState {
   templates: ServiceTemplate[];
   status: "idle" | "loading" | "succeeded" | "failed";
-  error: string | null;
+  error: SliceError | null;
 }
 
 const initialState: ServiceTemplatesState = {
@@ -17,17 +18,27 @@ const initialState: ServiceTemplatesState = {
 export const fetchServiceTemplates = createAsyncThunk<
   ServiceTemplate[],
   void,
-  { state: RootState }
->("serviceTemplates/fetchServiceTemplates", async () => {
-  // TODO: BASE URL should be configurable
-  const response = await fetch(
-    "http://127.0.0.1:3000/api/v1/service-templates",
-  );
-  if (!response.ok) {
-    throw new Error("Failed to fetch service templates");
+  { rejectValue: SliceError }
+>("serviceTemplates/fetchServiceTemplates", async (_, thunkAPI) => {
+  try {
+    return await apiClient<ServiceTemplate[]>("/api/v1/service-templates");
+  } catch (error) {
+    if (error instanceof ApiError) {
+      return thunkAPI.rejectWithValue({
+        code: error.code,
+        message: error.message,
+      });
+    } else if (error instanceof Error) {
+      return thunkAPI.rejectWithValue({
+        code: "unknown-error",
+        message: error.message,
+      });
+    }
+    return thunkAPI.rejectWithValue({
+      code: "unknown-error",
+      message: "Unknown error",
+    });
   }
-  const data = await response.json();
-  return data;
 });
 
 export const serviceTemplatesSlice = createSlice({
@@ -45,7 +56,14 @@ export const serviceTemplatesSlice = createSlice({
       })
       .addCase(fetchServiceTemplates.rejected, (state, action) => {
         state.status = "failed";
-        state.error = action.error.message ?? "Unknown error";
+        if (action.payload) {
+          state.error = action.payload;
+        } else {
+          state.error = {
+            code: "unknown-error",
+            message: "Unknown error",
+          };
+        }
       });
   },
 });

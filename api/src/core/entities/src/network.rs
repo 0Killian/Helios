@@ -24,7 +24,7 @@ pub struct WanStatsItem {
 #[serde(rename_all = "camelCase")]
 pub struct WanConnectivity {
     pub ipv4: Ipv4Addr,
-    pub ipv6: Ipv6Addr,
+    pub ipv6: Option<Ipv6Addr>,
     pub gateway: IpAddr,
     pub status: WanStatus,
     #[serde_as(as = "serde_with::DurationSeconds<i64>")]

@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::prelude::FromRow;
 use strum::{Display, EnumString};
 use uuid::Uuid;
+use validator::Validate;
 
 #[derive(Clone, Debug, Serialize, FromRow)]
 #[serde(rename_all = "camelCase")]
@@ -45,10 +46,13 @@ pub struct ServiceTemplate {
     pub ports: Vec<ServicePortTemplate>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, Validate)]
 #[serde(rename_all = "camelCase")]
 pub struct ServicePortTemplate {
+    #[validate(length(min = 1, max = 100))]
     pub name: String,
+
+    #[validate(range(min = 1, max = 65535))]
     pub port: u16,
     pub transport_protocol: TransportProtocol,
     pub application_protocol: ApplicationProtocol,

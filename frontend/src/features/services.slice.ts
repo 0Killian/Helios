@@ -1,6 +1,7 @@
-import { RootState } from "@/store";
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import { ApplicationProtocol, Service, TransportProtocol } from "@/models";
+import { apiClient, ApiError } from "@/api/apiClient";
+import { SliceError } from ".";
 
 export interface CreateService {
   deviceMac: string;
@@ -19,7 +20,7 @@ export interface CreateServicePort {
 interface ServicesState {
   service: Service | null;
   status: "idle" | "loading" | "succeeded" | "failed";
-  error: string | null;
+  error: SliceError | null;
 }
 
 const initialState: ServicesState = {
@@ -34,21 +35,34 @@ const initialState: ServicesState = {
 export const createService = createAsyncThunk<
   Service,
   CreateService,
-  { state: RootState }
->("services/createService", async (payload) => {
+  { rejectValue: SliceError }
+>("services/createService", async (payload, thunkAPI) => {
   // TODO: BASE URL should be configurable
-  const response = await fetch("http://127.0.0.1:3000/api/v1/services", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  });
-  if (!response.ok) {
-    throw new Error("Failed to create service");
+  try {
+    return await apiClient<Service>("/api/v1/services", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+  } catch (error) {
+    if (error instanceof ApiError) {
+      return thunkAPI.rejectWithValue({
+        code: error.code,
+        message: error.message,
+      });
+    } else if (error instanceof Error) {
+      return thunkAPI.rejectWithValue({
+        code: "unknown-error",
+        message: error.message,
+      });
+    }
+    return thunkAPI.rejectWithValue({
+      code: "unknown-error",
+      message: "Unknown error",
+    });
   }
-  const data = await response.json();
-  return data;
 });
 
 /**
@@ -69,7 +83,14 @@ export const servicesSlice = createSlice({
       })
       .addCase(createService.rejected, (state, action) => {
         state.status = "failed";
-        state.error = action.error.message ?? "Unknown error";
+        if (action.payload) {
+          state.error = action.payload;
+        } else {
+          state.error = {
+            code: "unknown-error",
+            message: "Unknown error",
+          };
+        }
       });
   },
 });

@@ -1,11 +1,17 @@
-use axum::{Json, extract::State};
+use axum::{extract::State, http::StatusCode};
 use axum_distributed_routing::route;
 use entities::{FullDevice, Pagination};
 use serde::Deserialize;
+use validator::Validate;
 
-use crate::{PostgresAppState, devices::Devices};
+use crate::{
+    PostgresAppState,
+    devices::Devices,
+    extractors::ValidQuery,
+    response::{ApiResponse, ApiResult},
+};
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Validate)]
 pub struct ListDeviceQuery {
     #[serde(flatten, deserialize_with = "entities::deserialize_option_pagination")]
     pub pagination: Option<Pagination>,
@@ -18,9 +24,12 @@ route!(
     method = GET,
     group = Devices,
     path = "/",
-    query = ListDeviceQuery,
+    query = ValidQuery<ListDeviceQuery>,
 
-    async fetch_devices(state: State<PostgresAppState>) -> Json<Vec<FullDevice>> {
-        Json(state.list_devices.execute(query.pagination, query.full).await)
+    async fetch_devices(state: State<PostgresAppState>) -> ApiResult<Vec<FullDevice>> {
+        Ok(ApiResponse::new(match state.list_devices.execute(query.pagination, query.full).await {
+            Ok(devices) => devices,
+            Err(err) => return Err(err.into()),
+        }, StatusCode::OK))
     }
 );

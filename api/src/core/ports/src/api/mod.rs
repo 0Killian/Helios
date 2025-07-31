@@ -1,3 +1,3 @@
-mod internet_provider;
+mod router_api;
 
-pub use internet_provider::*;
+pub use router_api::*;

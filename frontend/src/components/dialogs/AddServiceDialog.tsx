@@ -91,7 +91,9 @@ export const AddServiceDialog = ({
       } else {
         toast({
           title: "Error creating service",
-          description: "Failed to create the service. Please try again.",
+          description:
+            result.payload?.message ||
+            "An unexpected error occurred. Please try again.",
           variant: "destructive",
         });
         return false;

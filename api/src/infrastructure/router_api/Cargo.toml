@@ -1,5 +1,5 @@
 [package]
-name = "internet-provider-api"
+name = "router-api"
 version = "0.1.0"
 edition = "2024"
 
@@ -14,3 +14,4 @@ serde_json.workspace = true
 async-trait.workspace = true
 chrono.workspace = true
 tokio.workspace = true
+thiserror.workspace = true

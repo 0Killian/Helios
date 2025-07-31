@@ -1,9 +1,19 @@
 use common::CONFIG;
-use ports::repositories::{ServicesRepository, UnitOfWorkProvider};
+use ports::repositories::{RepositoryError, ServicesRepository, UnitOfWorkProvider};
 use serde::Deserialize;
+use thiserror::Error;
 use uuid::Uuid;
 
-#[derive(Deserialize)]
+#[derive(Error, Debug, PartialEq, Eq)]
+pub enum GenerateInstallScriptError {
+    #[error("The requested service was not found.")]
+    ServiceNotFound,
+
+    #[error("A database error occurred: {0}.")]
+    DatabaseError(#[from] RepositoryError),
+}
+
+#[derive(Deserialize, Copy, Clone)]
 #[serde(rename_all = "lowercase")]
 pub enum OperatingSystem {
     Linux,
@@ -29,11 +39,21 @@ impl<SR: ServicesRepository<UWP>, UWP: UnitOfWorkProvider> GenerateInstallScript
         }
     }
 
-    pub async fn execute(&self, os: OperatingSystem, service_id: Uuid) -> InstallationScript {
-        let mut uow = self.uow_provider.begin_transaction().await;
-        let service = SR::fetch_one(&mut uow, service_id).await.unwrap();
+    pub async fn execute(
+        &self,
+        os: OperatingSystem,
+        service_id: Uuid,
+    ) -> Result<InstallationScript, GenerateInstallScriptError> {
+        let mut uow = self.uow_provider.begin_transaction().await?;
+        let service = match SR::fetch_one(&mut uow, service_id).await {
+            Ok(service) => service,
+            Err(RepositoryError::NotFound) => {
+                return Err(GenerateInstallScriptError::ServiceNotFound);
+            }
+            Err(err) => return Err(GenerateInstallScriptError::DatabaseError(err)),
+        };
 
-        match os {
+        Ok(match os {
             OperatingSystem::Linux => InstallationScript {
                 content: format!(
                     include_str!("../../../assets/install_script_linux.sh"),
@@ -46,6 +66,6 @@ impl<SR: ServicesRepository<UWP>, UWP: UnitOfWorkProvider> GenerateInstallScript
                 file_format: "text/x-shellscript".to_string(),
                 file_name: "install_script.sh".to_string(),
             },
-        }
+        })
     }
 }

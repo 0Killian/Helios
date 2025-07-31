@@ -1,11 +1,12 @@
-import { RootState } from "@/store";
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import { NetworkWan } from "@/models";
+import { apiClient, ApiError } from "@/api/apiClient";
+import { SliceError } from ".";
 
 interface NetworkState {
   wan: NetworkWan | null;
   status: "idle" | "loading" | "succeeded" | "failed";
-  error: string | null;
+  error: SliceError | null;
 }
 
 const initialState: NetworkState = {
@@ -20,15 +21,27 @@ const initialState: NetworkState = {
 export const fetchNetworkWanInfo = createAsyncThunk<
   NetworkWan,
   void,
-  { state: RootState }
->("network/fetchNetworkWanInfo", async () => {
-  // TODO: BASE URL should be configurable
-  const response = await fetch("http://127.0.0.1:3000/api/v1/network");
-  if (!response.ok) {
-    throw new Error("Failed to fetch network WAN info");
+  { rejectValue: SliceError }
+>("network/fetchNetworkWanInfo", async (_, thunkAPI) => {
+  try {
+    return await apiClient<NetworkWan>("/api/v1/network");
+  } catch (error) {
+    if (error instanceof ApiError) {
+      return thunkAPI.rejectWithValue({
+        code: error.code,
+        message: error.message,
+      });
+    } else if (error instanceof Error) {
+      return thunkAPI.rejectWithValue({
+        code: "unknown-error",
+        message: error.message,
+      });
+    }
+    return thunkAPI.rejectWithValue({
+      code: "unknown-error",
+      message: "Unknown error",
+    });
   }
-  const data = await response.json();
-  return data;
 });
 
 /**
@@ -49,7 +62,14 @@ export const networkSlice = createSlice({
       })
       .addCase(fetchNetworkWanInfo.rejected, (state, action) => {
         state.status = "failed";
-        state.error = action.error.message ?? "Unknown error";
+        if (action.payload) {
+          state.error = action.payload;
+        } else {
+          state.error = {
+            code: "unknown-error",
+            message: "Unknown error",
+          };
+        }
       });
   },
 });

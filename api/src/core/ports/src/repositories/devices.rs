@@ -3,6 +3,8 @@ use mac_address::MacAddress;
 
 use crate::repositories::{Repository, UnitOfWorkProvider};
 
+use super::RepositoryResult;
+
 #[async_trait::async_trait]
 pub trait DevicesRepository<UWP>: Repository<UWP> + Send + Sync + Clone
 where
@@ -11,11 +13,13 @@ where
     async fn fetch_all<'a>(
         uow: &'a mut UWP::UnitOfWork<'_>,
         pagination: Option<Pagination>,
-    ) -> Vec<Device>;
+    ) -> RepositoryResult<Vec<Device>>;
+
     async fn fetch_one<'a>(
         uow: &'a mut UWP::UnitOfWork<'_>,
         mac_address: MacAddress,
-    ) -> Option<Device>;
-    async fn create<'a>(uow: &'a mut UWP::UnitOfWork<'_>, device: Device);
-    async fn update<'a>(uow: &'a mut UWP::UnitOfWork<'_>, device: Device);
+    ) -> RepositoryResult<Option<Device>>;
+
+    async fn create<'a>(uow: &'a mut UWP::UnitOfWork<'_>, device: Device) -> RepositoryResult<()>;
+    async fn update<'a>(uow: &'a mut UWP::UnitOfWork<'_>, device: Device) -> RepositoryResult<()>;
 }

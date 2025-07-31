@@ -1,7 +1,7 @@
 use std::{collections::HashMap, sync::Arc, time::Instant};
 
 use ports::{
-    api::InternetProviderApi,
+    api::RouterApi,
     repositories::{DevicesRepository, UnitOfWorkProvider},
 };
 
@@ -9,15 +9,15 @@ use crate::PeriodicUseCase;
 
 pub struct SyncDevicesUseCase<DR: DevicesRepository<UWP>, UWP: UnitOfWorkProvider> {
     _marker: std::marker::PhantomData<DR>,
-    internet_provider_api: Arc<dyn InternetProviderApi>,
+    router_api: Arc<dyn RouterApi>,
     uow_provider: UWP,
 }
 
 impl<DR: DevicesRepository<UWP>, UWP: UnitOfWorkProvider> SyncDevicesUseCase<DR, UWP> {
-    pub fn new(uow_provider: UWP, internet_provider_api: Arc<dyn InternetProviderApi>) -> Self {
+    pub fn new(uow_provider: UWP, router_api: Arc<dyn RouterApi>) -> Self {
         Self {
             _marker: std::marker::PhantomData,
-            internet_provider_api,
+            router_api,
             uow_provider,
         }
     }
@@ -32,9 +32,29 @@ impl<DR: DevicesRepository<UWP>, UWP: UnitOfWorkProvider + 'static> PeriodicUseC
     }
 
     async fn execute(&self) {
-        let mut uow = self.uow_provider.begin_transaction().await;
-        let scanned_devices = self.internet_provider_api.list_devices().await;
-        let known_devices = DR::fetch_all(&mut uow, None).await;
+        let mut uow = match self.uow_provider.begin_transaction().await {
+            Ok(uow) => uow,
+            Err(err) => {
+                println!("Failed to begin transaction: {}", err);
+                return;
+            }
+        };
+
+        let scanned_devices = match self.router_api.list_devices().await {
+            Ok(devices) => devices,
+            Err(err) => {
+                println!("Failed to fetch devices: {}", err);
+                return;
+            }
+        };
+
+        let known_devices = match DR::fetch_all(&mut uow, None).await {
+            Ok(devices) => devices,
+            Err(err) => {
+                println!("Failed to fetch devices: {}", err);
+                return;
+            }
+        };
 
         let mut known_map = known_devices
             .into_iter()
@@ -53,8 +73,14 @@ impl<DR: DevicesRepository<UWP>, UWP: UnitOfWorkProvider + 'static> PeriodicUseC
                 .unwrap_or_else(|| (scanned, Op::Create))
         }) {
             match op {
-                Op::Update => DR::update(&mut uow, device).await,
-                Op::Create => DR::create(&mut uow, device).await,
+                Op::Update => match DR::update(&mut uow, device).await {
+                    Ok(_) => (),
+                    Err(err) => println!("Failed to update device: {}", err),
+                },
+                Op::Create => match DR::create(&mut uow, device).await {
+                    Ok(_) => (),
+                    Err(err) => println!("Failed to create device: {}", err),
+                },
             }
         }
 
@@ -62,9 +88,15 @@ impl<DR: DevicesRepository<UWP>, UWP: UnitOfWorkProvider + 'static> PeriodicUseC
             d.is_online = false;
             d
         }) {
-            DR::update(&mut uow, device).await;
+            match DR::update(&mut uow, device).await {
+                Ok(_) => (),
+                Err(err) => println!("Failed to update device: {}", err),
+            };
         }
 
-        self.uow_provider.commit(uow).await;
+        match self.uow_provider.commit(uow).await {
+            Ok(_) => (),
+            Err(err) => println!("Failed to commit transaction: {}", err),
+        };
     }
 }

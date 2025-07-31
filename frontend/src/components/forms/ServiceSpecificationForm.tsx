@@ -68,7 +68,16 @@ const PortField = ({
             {portTemplate.transportProtocol})
           </FormLabel>
           <FormControl>
-            <Input type="number" min={1} max={65535} {...field} />
+            <Input
+              type="number"
+              min={1}
+              max={65535}
+              {...field}
+              onChange={(e) => {
+                const value = e.target.value;
+                field.onChange(parseInt(value, 10));
+              }}
+            />
           </FormControl>
         </FormItem>
       )}
