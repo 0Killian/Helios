@@ -8,10 +8,11 @@ use axum_distributed_routing::route;
 use domain::{GenerateInstallScriptError, InstallationScript, OperatingSystem};
 use serde::Deserialize;
 use uuid::Uuid;
+use validator::Validate;
 
-use crate::{PostgresAppState, services::Services};
+use crate::{PostgresAppState, extractors::ValidQuery, services::Services};
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Validate)]
 pub struct InstallScriptQuery {
     os: OperatingSystem,
 }
@@ -20,7 +21,7 @@ route!(
     method = GET,
     group = Services,
     path = "/{service_id:Uuid}/install-script",
-    query = InstallScriptQuery,
+    query = ValidQuery<InstallScriptQuery>,
 
     async create_service(state: State<PostgresAppState>) -> Response<Body> {
         let InstallationScript { content, file_format, file_name } = match state.generate_install_script.execute(query.os, service_id).await {

@@ -34,6 +34,7 @@ route_group!(pub RestV1, PostgresAppState, Base, "/api/v1");
 
 mod agents;
 mod devices;
+mod extractors;
 mod network;
 mod response;
 mod service_templates;
@@ -73,7 +74,12 @@ async fn main() -> anyhow::Result<()> {
     );
 
     Ok(axum::serve(
-        TcpListener::bind((CONFIG.api.listen_address, CONFIG.api.listen_port)).await?,
+        TcpListener::bind((CONFIG.api.listen_address, CONFIG.api.listen_port))
+            .await
+            .map(|listener| {
+                println!("Listening on {}", listener.local_addr().unwrap());
+                listener
+            })?,
         router,
     )
     .await?)

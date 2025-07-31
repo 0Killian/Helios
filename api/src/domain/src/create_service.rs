@@ -5,6 +5,7 @@ use mac_address::MacAddress;
 use ports::repositories::{RepositoryError, ServicesRepository, UnitOfWorkProvider};
 use serde::Deserialize;
 use thiserror::Error;
+use validator::Validate;
 
 #[derive(Error, Debug, PartialEq, Eq)]
 pub enum CreateServiceError {
@@ -22,12 +23,16 @@ pub enum CreateServiceError {
     DatabaseError(#[from] RepositoryError),
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Validate)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateService {
     pub device_mac: MacAddress,
+
+    #[validate(length(min = 1, max = 100))]
     pub display_name: String,
     pub kind: ServiceKind,
+
+    #[validate(nested)]
     pub ports: Vec<ServicePortTemplate>,
 }
 

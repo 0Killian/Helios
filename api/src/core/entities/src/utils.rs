@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::ToSql;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone, Copy)]
 pub struct Pagination {
     pub page: u32,
     pub limit: u32,

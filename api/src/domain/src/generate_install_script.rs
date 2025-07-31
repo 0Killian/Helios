@@ -13,7 +13,7 @@ pub enum GenerateInstallScriptError {
     DatabaseError(#[from] RepositoryError),
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Copy, Clone)]
 #[serde(rename_all = "lowercase")]
 pub enum OperatingSystem {
     Linux,

@@ -21,3 +21,5 @@ sqlx.workspace = true
 uuid.workspace = true
 serde_json.workspace = true
 anyhow.workspace = true
+validator.workspace = true
+async-trait.workspace = true

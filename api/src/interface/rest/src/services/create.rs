@@ -1,37 +1,39 @@
-use axum::{
-    extract::{Json, State},
-    http::StatusCode,
-};
+use axum::{extract::State, http::StatusCode};
 use axum_distributed_routing::route;
 use domain::{CreateService, CreateServiceError};
 use entities::Service;
 
-use crate::{PostgresAppState, response::ApiResponse, services::Services};
+use crate::{
+    PostgresAppState,
+    extractors::ValidJson,
+    response::{ApiError, ApiResponse, ApiResult},
+    services::Services,
+};
 
-impl From<CreateServiceError> for ApiResponse<Service> {
+impl From<CreateServiceError> for ApiError {
     fn from(err: CreateServiceError) -> Self {
         match err {
-            CreateServiceError::DuplicatePortNumber => ApiResponse::error(
+            CreateServiceError::DuplicatePortNumber => ApiError::new(
                 "duplicate-port-number",
                 err.to_string(),
                 StatusCode::BAD_REQUEST,
             ),
-            CreateServiceError::DuplicatePortType => ApiResponse::error(
+            CreateServiceError::DuplicatePortType => ApiError::new(
                 "duplicate-port-type",
                 err.to_string(),
                 StatusCode::BAD_REQUEST,
             ),
-            CreateServiceError::MissingRequiredPorts => ApiResponse::error(
+            CreateServiceError::MissingRequiredPorts => ApiError::new(
                 "missing-required-ports",
                 err.to_string(),
                 StatusCode::BAD_REQUEST,
             ),
-            CreateServiceError::InvalidPortConfiguration => ApiResponse::error(
+            CreateServiceError::InvalidPortConfiguration => ApiError::new(
                 "invalid-port-configuration",
                 err.to_string(),
                 StatusCode::BAD_REQUEST,
             ),
-            CreateServiceError::ServiceAlreadyExists => ApiResponse::error(
+            CreateServiceError::ServiceAlreadyExists => ApiError::new(
                 "service-already-exists",
                 err.to_string(),
                 StatusCode::CONFLICT,
@@ -45,12 +47,12 @@ route!(
     method = POST,
     group = Services,
     path = "/",
-    body = Json<CreateService>,
+    body = ValidJson<CreateService>,
 
-    async create_service(state: State<PostgresAppState>) -> ApiResponse<Service> {
-        match state.create_service.execute(body.0).await {
-            Ok(service) => ApiResponse::new(service, StatusCode::CREATED),
-            Err(err) => err.into(),
-        }
+    #[axum::debug_handler]
+    async create_service(state: State<PostgresAppState>) -> ApiResult<Service> {
+        Ok(state.create_service.execute(body.0).await.map(|service| {
+            ApiResponse::new(service, StatusCode::CREATED)
+        })?)
     }
 );
