@@ -6,6 +6,7 @@ use entities::SharedLockedReference;
 use ports::repositories::{RepositoryError, RepositoryResult, UnitOfWorkProvider};
 pub use services::*;
 use sqlx::PgTransaction;
+use tracing::error;
 
 type PostgresUoW<'a> = PgTransaction<'a>;
 
@@ -53,7 +54,7 @@ pub(crate) fn map_sqlx_error(err: sqlx::Error) -> RepositoryError {
         | sqlx::Error::Configuration(_)
         | sqlx::Error::Protocol(_)
         | sqlx::Error::BeginFailed => {
-            println!(
+            error!(
                 "An error occurred while connecting to the database: {}",
                 err
             );
@@ -71,12 +72,12 @@ pub(crate) fn map_sqlx_error(err: sqlx::Error) -> RepositoryError {
                 return RepositoryError::CheckViolation;
             }
 
-            println!("An unhandled database error occurred");
+            error!("An unhandled database error occurred");
             RepositoryError::Unknown
         }
 
         _ => {
-            println!("An unhandled error occurred: {}", err);
+            error!("An unhandled error occurred: {}", err);
             RepositoryError::Unknown
         }
     }

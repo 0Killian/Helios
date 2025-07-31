@@ -7,6 +7,7 @@ use axum::{
 use ports::{api::RouterApiError, repositories::RepositoryError};
 use serde::Serialize;
 use serde_json::json;
+use tracing::error;
 use validator::ValidationErrors;
 
 pub type ApiResult<T> = Result<ApiResponse<T>, ApiError>;
@@ -52,7 +53,7 @@ impl<T: Serialize> IntoResponse for ApiResponse<T> {
                 .body(body.into())
                 .unwrap(),
             Err(err) => {
-                println!("Failed to serialize response: {}", err);
+                error!("Failed to serialize response: {}", err);
                 Response::builder()
                     .status(StatusCode::INTERNAL_SERVER_ERROR)
                     .header(header::CONTENT_TYPE, "application/json")
@@ -85,7 +86,7 @@ impl IntoResponse for ApiError {
                 .body(body.into())
                 .unwrap(),
             Err(err) => {
-                println!("Failed to serialize response: {}", err);
+                error!("Failed to serialize response: {}", err);
                 Response::builder()
                     .status(StatusCode::INTERNAL_SERVER_ERROR)
                     .header(header::CONTENT_TYPE, "application/json")

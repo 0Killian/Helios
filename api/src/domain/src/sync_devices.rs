@@ -4,6 +4,7 @@ use ports::{
     api::RouterApi,
     repositories::{DevicesRepository, UnitOfWorkProvider},
 };
+use tracing::{error, info, instrument};
 
 use crate::PeriodicUseCase;
 
@@ -31,11 +32,12 @@ impl<DR: DevicesRepository<UWP>, UWP: UnitOfWorkProvider + 'static> PeriodicUseC
         Some(Instant::now() + std::time::Duration::from_secs(60))
     }
 
+    #[instrument(skip(self), name = "SyncDevicesUseCase::execute")]
     async fn execute(&self) {
         let mut uow = match self.uow_provider.begin_transaction().await {
             Ok(uow) => uow,
             Err(err) => {
-                println!("Failed to begin transaction: {}", err);
+                error!("Failed to begin transaction: {}", err);
                 return;
             }
         };
@@ -43,7 +45,7 @@ impl<DR: DevicesRepository<UWP>, UWP: UnitOfWorkProvider + 'static> PeriodicUseC
         let scanned_devices = match self.router_api.list_devices().await {
             Ok(devices) => devices,
             Err(err) => {
-                println!("Failed to fetch devices: {}", err);
+                error!("Failed to fetch devices: {}", err);
                 return;
             }
         };
@@ -51,35 +53,47 @@ impl<DR: DevicesRepository<UWP>, UWP: UnitOfWorkProvider + 'static> PeriodicUseC
         let known_devices = match DR::fetch_all(&mut uow, None).await {
             Ok(devices) => devices,
             Err(err) => {
-                println!("Failed to fetch devices: {}", err);
+                error!("Failed to fetch devices: {}", err);
                 return;
             }
         };
+
+        info!(
+            scanned_devices = scanned_devices.len(),
+            known_devices = known_devices.len(),
+            "Fetched devices from router and database"
+        );
 
         let mut known_map = known_devices
             .into_iter()
             .map(|d| (d.mac_address.clone(), d))
             .collect::<HashMap<_, _>>();
 
-        pub enum Op {
-            Update,
-            Create,
-        }
+        let mut new_devices = Vec::new();
+        let mut disconnected_devices = Vec::new();
+        let mut reconnected_devices = Vec::new();
 
-        for (device, op) in scanned_devices.into_iter().map(|scanned| {
+        for update in scanned_devices.into_iter().map(|scanned| {
             known_map
                 .remove(&scanned.mac_address)
-                .map(|device| (device.update(scanned.clone()), Op::Update))
-                .unwrap_or_else(|| (scanned, Op::Create))
+                .map(|device| (Some(device.clone()), device.update(scanned.clone())))
+                .unwrap_or_else(|| (None, scanned))
         }) {
-            match op {
-                Op::Update => match DR::update(&mut uow, device).await {
+            match update {
+                (Some(old), new) => match DR::update(&mut uow, new.clone()).await {
+                    Ok(_) if new.is_online != old.is_online => {
+                        if !new.is_online {
+                            disconnected_devices.push(new);
+                        } else {
+                            reconnected_devices.push(new);
+                        }
+                    }
                     Ok(_) => (),
-                    Err(err) => println!("Failed to update device: {}", err),
+                    Err(err) => error!("Failed to update device: {}", err),
                 },
-                Op::Create => match DR::create(&mut uow, device).await {
-                    Ok(_) => (),
-                    Err(err) => println!("Failed to create device: {}", err),
+                (None, device) => match DR::create(&mut uow, device.clone()).await {
+                    Ok(_) => new_devices.push(device),
+                    Err(err) => error!("Failed to create device: {}", err),
                 },
             }
         }
@@ -88,15 +102,22 @@ impl<DR: DevicesRepository<UWP>, UWP: UnitOfWorkProvider + 'static> PeriodicUseC
             d.is_online = false;
             d
         }) {
-            match DR::update(&mut uow, device).await {
-                Ok(_) => (),
-                Err(err) => println!("Failed to update device: {}", err),
+            match DR::update(&mut uow, device.clone()).await {
+                Ok(_) => disconnected_devices.push(device),
+                Err(err) => error!("Failed to update device: {}", err),
             };
         }
 
         match self.uow_provider.commit(uow).await {
             Ok(_) => (),
-            Err(err) => println!("Failed to commit transaction: {}", err),
+            Err(err) => error!("Failed to commit transaction: {}", err),
         };
+
+        info!(
+            new_devices = ?new_devices.iter().map(|d| d.mac_address.to_string()).collect::<Vec<_>>(),
+            disconnected_devices = ?disconnected_devices.iter().map(|d| d.mac_address.to_string()).collect::<Vec<_>>(),
+            reconnected_devices = ?reconnected_devices.iter().map(|d| d.mac_address.to_string()).collect::<Vec<_>>(),
+            "Finished syncing devices"
+        );
     }
 }

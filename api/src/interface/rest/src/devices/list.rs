@@ -2,6 +2,7 @@ use axum::{extract::State, http::StatusCode};
 use axum_distributed_routing::route;
 use entities::{FullDevice, Pagination};
 use serde::Deserialize;
+use tracing::instrument;
 use validator::Validate;
 
 use crate::{
@@ -26,6 +27,11 @@ route!(
     path = "/",
     query = ValidQuery<ListDeviceQuery>,
 
+    #[instrument(skip(state, query), fields(
+        full = %query.full,
+        pagination.page = query.pagination.map(|p| p.page),
+        pagination.limit = query.pagination.map(|p| p.limit),
+    ))]
     async fetch_devices(state: State<PostgresAppState>) -> ApiResult<Vec<FullDevice>> {
         Ok(ApiResponse::new(match state.list_devices.execute(query.pagination, query.full).await {
             Ok(devices) => devices,

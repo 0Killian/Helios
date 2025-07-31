@@ -2,6 +2,7 @@ use entities::{FullDevice, Pagination};
 use ports::repositories::{
     DevicesRepository, RepositoryResult, ServicesRepository, UnitOfWorkProvider,
 };
+use tracing::instrument;
 
 #[derive(Clone)]
 pub struct ListDevicesUseCase<
@@ -23,6 +24,7 @@ impl<DR: DevicesRepository<UWP>, SR: ServicesRepository<UWP>, UWP: UnitOfWorkPro
         }
     }
 
+    #[instrument(skip(self), name = "ListDevicesUseCase::execute")]
     pub async fn execute(
         &self,
         pagination: Option<Pagination>,

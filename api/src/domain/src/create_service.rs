@@ -5,6 +5,7 @@ use mac_address::MacAddress;
 use ports::repositories::{RepositoryError, ServicesRepository, UnitOfWorkProvider};
 use serde::Deserialize;
 use thiserror::Error;
+use tracing::{error, info, instrument, warn};
 use validator::Validate;
 
 #[derive(Error, Debug, PartialEq, Eq)]
@@ -160,13 +161,16 @@ impl<SR: ServicesRepository<UWP>, UWP: UnitOfWorkProvider> CreateServiceUseCase<
         }
     }
 
+    #[instrument(skip(self), name = "CreateServiceUseCase::execute")]
     pub async fn execute(&self, service: CreateService) -> Result<Service, CreateServiceError> {
+        info!(device = %service.device_mac, service = ?service, "Creating a new service");
         let mut uow = self.uow_provider.begin_transaction().await?;
 
         if SR::find_one(&mut uow, service.device_mac, service.kind, &service.ports)
             .await?
             .is_some()
         {
+            warn!("Service already exists");
             return Err(CreateServiceError::ServiceAlreadyExists);
         }
 
@@ -176,13 +180,15 @@ impl<SR: ServicesRepository<UWP>, UWP: UnitOfWorkProvider> CreateServiceUseCase<
             Ok(_) => (),
             Err(RepositoryError::UniqueViolation) => {
                 // Should never happen???
-                println!("Unexpected unique violation when creating service");
+                error!("Unexpected unique violation when creating service");
                 return Err(CreateServiceError::ServiceAlreadyExists);
             }
             Err(err) => return Err(CreateServiceError::DatabaseError(err)),
         }
 
         self.uow_provider.commit(uow).await?;
+
+        info!(service = ?service, "Service created successfully");
         Ok(service)
     }
 }

@@ -1,6 +1,7 @@
 use entities::{Device, Pagination, ToSql};
 use ports::repositories::{DevicesRepository, Repository, RepositoryResult};
 use sqlx::{PgConnection, types::mac_address::MacAddress};
+use tracing::instrument;
 
 use crate::{PostgresUWP, PostgresUoW, map_sqlx_error};
 
@@ -11,6 +12,7 @@ impl Repository<PostgresUWP> for PostgresDevicesRepository {}
 
 #[async_trait::async_trait]
 impl DevicesRepository<PostgresUWP> for PostgresDevicesRepository {
+    #[instrument(skip(connection))]
     async fn fetch_all<'a>(
         connection: &'a mut PostgresUoW<'_>,
         pagination: Option<Pagination>,
@@ -24,6 +26,7 @@ impl DevicesRepository<PostgresUWP> for PostgresDevicesRepository {
         .map_err(map_sqlx_error)
     }
 
+    #[instrument(skip(connection))]
     async fn fetch_one<'a>(
         connection: &'a mut PostgresUoW<'_>,
         mac_address: MacAddress,
@@ -35,6 +38,7 @@ impl DevicesRepository<PostgresUWP> for PostgresDevicesRepository {
             .map_err(map_sqlx_error)
     }
 
+    #[instrument(skip(connection))]
     async fn create<'a>(
         connection: &'a mut PostgresUoW<'_>,
         device: Device,
@@ -67,6 +71,7 @@ impl DevicesRepository<PostgresUWP> for PostgresDevicesRepository {
         .map(|_| ())
     }
 
+    #[instrument(skip(connection))]
     async fn update<'a>(
         connection: &'a mut PostgresUoW<'_>,
         device: Device,

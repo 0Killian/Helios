@@ -2,6 +2,7 @@ use axum::{extract::State, http::StatusCode};
 use axum_distributed_routing::route;
 use domain::{CreateService, CreateServiceError};
 use entities::Service;
+use tracing::instrument;
 
 use crate::{
     PostgresAppState,
@@ -49,7 +50,7 @@ route!(
     path = "/",
     body = ValidJson<CreateService>,
 
-    #[axum::debug_handler]
+    #[instrument(skip(state))]
     async create_service(state: State<PostgresAppState>) -> ApiResult<Service> {
         Ok(state.create_service.execute(body.0).await.map(|service| {
             ApiResponse::new(service, StatusCode::CREATED)

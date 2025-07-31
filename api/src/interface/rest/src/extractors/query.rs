@@ -44,9 +44,3 @@ impl<T> DerefMut for ValidQuery<T> {
         &mut self.0
     }
 }
-
-impl<T> ValidQuery<T> {
-    pub fn into_inner(self) -> T {
-        self.0
-    }
-}

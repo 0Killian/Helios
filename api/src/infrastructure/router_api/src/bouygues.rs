@@ -7,6 +7,8 @@ use reqwest::{StatusCode, Url};
 use serde::{Deserialize, de::Visitor};
 use thiserror::Error;
 use tokio::sync::RwLock;
+use tracing::{error, instrument, warn};
+use validator::{Validate, ValidationErrors};
 
 #[derive(Error, Debug)]
 enum BboxRouterApiError {
@@ -21,20 +23,28 @@ enum BboxRouterApiError {
 
     #[error("Missing required field: {0}")]
     MissingField(String),
+
+    #[error("Validation errors: {0}")]
+    ValidationErrors(#[from] ValidationErrors),
 }
 
 impl From<BboxRouterApiError> for RouterApiError {
     fn from(err: BboxRouterApiError) -> Self {
-        // TODO: Log the error
+        error!(
+            error = err.to_string(),
+            "An error occurred while using the router API"
+        );
         match err {
             BboxRouterApiError::RequestFailed(_) => RouterApiError::Unavailable,
             BboxRouterApiError::UnexpectedStatus(status) if status == StatusCode::UNAUTHORIZED => {
                 RouterApiError::AuthenticationFailed
             }
-            BboxRouterApiError::UnexpectedStatus(_) | BboxRouterApiError::ParseError(_) => {
+            BboxRouterApiError::UnexpectedStatus(_)
+            | BboxRouterApiError::ParseError(_)
+            | BboxRouterApiError::MissingField(_)
+            | BboxRouterApiError::ValidationErrors(_) => {
                 RouterApiError::InvalidResponse(err.to_string())
             }
-            BboxRouterApiError::MissingField(_) => RouterApiError::InvalidResponse(err.to_string()),
         }
     }
 }
@@ -95,12 +105,13 @@ impl<'de> Deserialize<'de> for Integer {
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Validate)]
 struct BboxDevice {
     hostname: String,
     macaddress: String,
     ipaddress: IpAddr,
     lastseen: Integer,
+    #[validate(range(min = 0, max = 1))]
     active: usize,
 }
 
@@ -161,6 +172,7 @@ impl BboxRouterApi {
         Ok(api)
     }
 
+    #[instrument(skip(self))]
     async fn authenticate(&self) -> Result<(), BboxRouterApiError> {
         let response = self
             .client
@@ -208,6 +220,7 @@ impl BboxRouterApi {
 
 #[async_trait::async_trait]
 impl RouterApi for BboxRouterApi {
+    #[instrument(skip(self))]
     async fn wan_connectivity(&self) -> RouterApiResult<WanConnectivity> {
         #[derive(Deserialize)]
         struct WanOuter {
@@ -250,6 +263,7 @@ impl RouterApi for BboxRouterApi {
         })
     }
 
+    #[instrument(skip(self))]
     async fn list_devices(&self) -> RouterApiResult<Vec<Device>> {
         #[derive(Deserialize)]
         struct HostsResponse {
@@ -274,9 +288,15 @@ impl RouterApi for BboxRouterApi {
             .hosts
             .list;
 
+        if devices.is_empty() {
+            warn!("Router API returned an empty list of devices. This should never happen!");
+            return Ok(Vec::new());
+        }
+
         devices
             .iter()
             .map(|device| {
+                device.validate().map_err(BboxRouterApiError::from)?;
                 Ok(Device {
                     last_seen: chrono::Utc::now()
                         - chrono::Duration::seconds(
@@ -301,6 +321,7 @@ impl RouterApi for BboxRouterApi {
             .collect::<Result<Vec<_>, _>>()
     }
 
+    #[instrument(skip(self))]
     async fn wan_stats(&self) -> RouterApiResult<WanStats> {
         #[derive(Deserialize)]
         struct Response {

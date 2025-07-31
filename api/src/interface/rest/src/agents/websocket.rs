@@ -6,6 +6,7 @@ use axum::{
     response::IntoResponse,
 };
 use axum_distributed_routing::route;
+use tracing::{info, warn};
 
 use crate::agents::Agents;
 
@@ -20,13 +21,13 @@ route!(
 );
 
 async fn handle_websocket(mut socket: WebSocket) {
-    println!("WebSocket connected!");
+    info!("WebSocket connected!");
 
     while let Some(msg) = socket.recv().await {
         if let Ok(msg) = msg {
             match msg {
                 Message::Text(t) => {
-                    println!("Received text message: {}", t);
+                    info!("Received text message: {}", t);
                     let response = format!("Echo: {}", t);
                     if socket.send(Message::Text(response.into())).await.is_err() {
                         // Client disconnected
@@ -34,19 +35,19 @@ async fn handle_websocket(mut socket: WebSocket) {
                     }
                 }
                 Message::Binary(_) => {
-                    println!("Received binary message (not supported)");
+                    warn!("Received binary message (not supported)");
                 }
                 Message::Ping(_) | Message::Pong(_) => {
                     // The library handles these automatically.
                 }
                 Message::Close(_) => {
-                    println!("Client disconnected");
+                    info!("Client disconnected");
                     break;
                 }
             }
         } else {
             // Client disconnected unexpectedly.
-            println!("Client disconnected");
+            info!("Client disconnected");
             break;
         }
     }
