@@ -1,4 +1,12 @@
+use axum::http::{HeaderName, Request};
 use std::sync::Arc;
+use tower_http::{
+    request_id::{MakeRequestId, PropagateRequestIdLayer, RequestId, SetRequestIdLayer},
+    trace::{DefaultMakeSpan, TraceLayer},
+};
+use tracing::{Level, info, span};
+use tracing_subscriber::util::SubscriberInitExt;
+use uuid::Uuid;
 
 use axum_distributed_routing::{create_router, route_group};
 use common::{CONFIG, RouterKind};
@@ -11,6 +19,7 @@ use repositories::{PostgresDevicesRepository, PostgresServicesRepository, Postgr
 use router_api::bouygues::BboxRouterApi;
 use sqlx::PgPool;
 use tokio::{net::TcpListener, sync::Mutex};
+use tracing_subscriber::layer::SubscriberExt;
 
 #[derive(Clone)]
 pub struct AppState<DR, SR, UWP>
@@ -40,8 +49,28 @@ mod response;
 mod service_templates;
 mod services;
 
+#[derive(Clone)]
+struct MakeRequestUuid;
+
+impl MakeRequestId for MakeRequestUuid {
+    fn make_request_id<B>(&mut self, _request: &Request<B>) -> Option<RequestId> {
+        let request_id = Uuid::now_v7().to_string().parse().unwrap();
+        Some(RequestId::new(request_id))
+    }
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    tracing_subscriber::registry()
+        .with(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| "rest=debug,tower_http=debug".into()),
+        )
+        .with(tracing_subscriber::fmt::layer())
+        .init();
+
+    tracing::info!("Starting REST server");
+
     let router_api = Arc::new(match CONFIG.router_api.kind {
         RouterKind::Bbox => {
             BboxRouterApi::new(
@@ -66,18 +95,42 @@ async fn main() -> anyhow::Result<()> {
         generate_install_script: GenerateInstallScriptUseCase::new(unit_of_work_provider.clone()),
     };
 
-    let router = create_router!(Base).with_state(app_state).layer(
-        tower_http::cors::CorsLayer::new()
-            .allow_origin(tower_http::cors::Any)
-            .allow_methods(tower_http::cors::Any)
-            .allow_headers(tower_http::cors::Any),
-    );
+    let router = create_router!(Base)
+        .with_state(app_state)
+        .layer(
+            tower_http::cors::CorsLayer::new()
+                .allow_origin(tower_http::cors::Any)
+                .allow_methods(tower_http::cors::Any)
+                .allow_headers(tower_http::cors::Any),
+        )
+        .layer(PropagateRequestIdLayer::x_request_id())
+        .layer(
+            TraceLayer::new_for_http().make_span_with(|request: &Request<_>| {
+                // Get the request ID from the request extensions
+                let request_id = request
+                    .extensions()
+                    .get::<RequestId>()
+                    .map(|id| id.header_value().to_str().unwrap())
+                    .unwrap_or_else(|| "unknown".into());
+
+                // Create a span with all the desired fields
+                span!(
+                    Level::INFO,
+                    "http_request",
+                    method = %request.method(),
+                    uri = %request.uri(),
+                    version = ?request.version(),
+                    request_id = %request_id,
+                )
+            }),
+        )
+        .layer(SetRequestIdLayer::x_request_id(MakeRequestUuid));
 
     Ok(axum::serve(
         TcpListener::bind((CONFIG.api.listen_address, CONFIG.api.listen_port))
             .await
             .map(|listener| {
-                println!("Listening on {}", listener.local_addr().unwrap());
+                info!("Listening on {}", listener.local_addr().unwrap());
                 listener
             })?,
         router,

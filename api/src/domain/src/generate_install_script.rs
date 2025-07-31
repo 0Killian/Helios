@@ -2,7 +2,10 @@ use common::CONFIG;
 use ports::repositories::{RepositoryError, ServicesRepository, UnitOfWorkProvider};
 use serde::Deserialize;
 use thiserror::Error;
+use tracing::instrument;
 use uuid::Uuid;
+
+// FIXME: This endpoint exposes the token, we should ensure that this is only called once for installation, or re-generate the token.
 
 #[derive(Error, Debug, PartialEq, Eq)]
 pub enum GenerateInstallScriptError {
@@ -13,7 +16,7 @@ pub enum GenerateInstallScriptError {
     DatabaseError(#[from] RepositoryError),
 }
 
-#[derive(Deserialize, Copy, Clone)]
+#[derive(Deserialize, Copy, Clone, Debug)]
 #[serde(rename_all = "lowercase")]
 pub enum OperatingSystem {
     Linux,
@@ -39,6 +42,7 @@ impl<SR: ServicesRepository<UWP>, UWP: UnitOfWorkProvider> GenerateInstallScript
         }
     }
 
+    #[instrument(skip(self), name = "GenerateInstallScriptUseCase::execute")]
     pub async fn execute(
         &self,
         os: OperatingSystem,

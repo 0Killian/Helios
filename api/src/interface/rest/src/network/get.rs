@@ -1,6 +1,7 @@
 use axum::{extract::State, http::StatusCode};
 use axum_distributed_routing::route;
 use entities::NetworkStatus;
+use tracing::instrument;
 
 use crate::{
     PostgresAppState,
@@ -14,7 +15,7 @@ route!(
     group = Network,
     path = "/",
 
-    #[axum::debug_handler]
+    #[instrument(skip(state))]
     async fetch_network(state: State<PostgresAppState>) -> ApiResult<NetworkStatus> {
         Ok(ApiResponse::new(match state.fetch_network_status.execute().await {
             Ok(status) => status,

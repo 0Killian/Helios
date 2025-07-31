@@ -5,6 +5,7 @@ use entities::{
 };
 use ports::repositories::{Repository, RepositoryError, RepositoryResult, ServicesRepository};
 use sqlx::{PgConnection, Postgres, prelude::FromRow, types::mac_address::MacAddress};
+use tracing::{error, instrument};
 use uuid::Uuid;
 
 use crate::{PostgresUWP, PostgresUoW, map_sqlx_error};
@@ -32,7 +33,7 @@ fn service_with_port_group_to_service(
     services_with_port: &[ServiceWithPort],
 ) -> RepositoryResult<Service> {
     let map_parse_err = |field: &str, value: &str| {
-        println!("Failed to parse {} from {}", field, value);
+        error!("Failed to parse {} from {}", field, value);
         RepositoryError::Unknown
     };
 
@@ -80,6 +81,7 @@ impl Repository<PostgresUWP> for PostgresServicesRepository {}
 
 #[async_trait::async_trait]
 impl ServicesRepository<PostgresUWP> for PostgresServicesRepository {
+    #[instrument(skip(connection))]
     async fn fetch_all_of_device<'a>(
         connection: &'a mut PostgresUoW<'_>,
         mac_address: MacAddress,
@@ -113,6 +115,7 @@ impl ServicesRepository<PostgresUWP> for PostgresServicesRepository {
         .collect()
     }
 
+    #[instrument(skip(connection))]
     async fn fetch_one<'a>(
         connection: &'a mut PostgresUoW<'_>,
         service_id: Uuid,
@@ -148,6 +151,7 @@ impl ServicesRepository<PostgresUWP> for PostgresServicesRepository {
         }
     }
 
+    #[instrument(skip(connection))]
     async fn find_one<'a>(
         connection: &'a mut PostgresUoW<'_>,
         mac_address: MacAddress,
@@ -218,6 +222,7 @@ impl ServicesRepository<PostgresUWP> for PostgresServicesRepository {
         Ok(None)
     }
 
+    #[instrument(skip(connection))]
     async fn create<'a>(
         connection: &'a mut PostgresUoW<'_>,
         service: Service,
@@ -271,6 +276,7 @@ impl ServicesRepository<PostgresUWP> for PostgresServicesRepository {
         Ok(())
     }
 
+    #[instrument(skip(connection))]
     async fn update<'a>(
         connection: &'a mut PostgresUoW<'_>,
         service: Service,
