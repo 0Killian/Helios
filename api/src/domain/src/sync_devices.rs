@@ -76,18 +76,19 @@ impl<DR: DevicesRepository<UWP>, UWP: UnitOfWorkProvider + 'static> PeriodicUseC
         for update in scanned_devices.into_iter().map(|scanned| {
             known_map
                 .remove(&scanned.mac_address)
-                .map(|device| (Some(scanned.clone()), device.update(scanned.clone())))
+                .map(|device| (Some(device.clone()), device.update(scanned.clone())))
                 .unwrap_or_else(|| (None, scanned))
         }) {
             match update {
                 (Some(old), new) => match DR::update(&mut uow, new.clone()).await {
-                    Ok(_) => {
-                        if !new.is_online && old.is_online {
+                    Ok(_) if new.is_online != old.is_online => {
+                        if !new.is_online {
                             disconnected_devices.push(new);
-                        } else if new.is_online && !old.is_online {
+                        } else {
                             reconnected_devices.push(new);
                         }
                     }
+                    Ok(_) => (),
                     Err(err) => error!("Failed to update device: {}", err),
                 },
                 (None, device) => match DR::create(&mut uow, device.clone()).await {
@@ -113,9 +114,9 @@ impl<DR: DevicesRepository<UWP>, UWP: UnitOfWorkProvider + 'static> PeriodicUseC
         };
 
         info!(
-            new_devices = ?new_devices,
-            disconnected_devices = ?disconnected_devices,
-            reconnected_devices = ?reconnected_devices,
+            new_devices = ?new_devices.iter().map(|d| d.mac_address.to_string()).collect::<Vec<_>>(),
+            disconnected_devices = ?disconnected_devices.iter().map(|d| d.mac_address.to_string()).collect::<Vec<_>>(),
+            reconnected_devices = ?reconnected_devices.iter().map(|d| d.mac_address.to_string()).collect::<Vec<_>>(),
             "Finished syncing devices"
         );
     }

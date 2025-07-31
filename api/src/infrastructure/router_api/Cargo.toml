@@ -16,3 +16,4 @@ chrono.workspace = true
 tokio.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
+validator.workspace = true

@@ -17,12 +17,10 @@ struct CronJob {
 
 impl CronJob {
     fn new(name: &'static str, job: Box<dyn PeriodicUseCase>) -> Self {
-        let next_execution = job.next_execution();
-
         CronJob {
             name,
             job,
-            next_execution,
+            next_execution: Some(Instant::now()),
         }
     }
 }

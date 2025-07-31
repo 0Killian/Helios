@@ -24,7 +24,7 @@ route!(
     path = "/{service_id:Uuid}/install-script",
     query = ValidQuery<InstallScriptQuery>,
 
-    #[instrument(skip(state), fields(os = ?query.os, service_id = %service_id))]
+    #[instrument(skip(state, query), fields(os = ?query.os, service_id = %service_id))]
     async create_service(state: State<PostgresAppState>) -> Response<Body> {
         let InstallationScript { content, file_format, file_name } = match state.generate_install_script.execute(query.os, service_id).await {
             Ok(script) => script,

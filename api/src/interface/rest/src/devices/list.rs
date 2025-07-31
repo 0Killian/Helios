@@ -27,7 +27,7 @@ route!(
     path = "/",
     query = ValidQuery<ListDeviceQuery>,
 
-    #[instrument(skip(state), fields(
+    #[instrument(skip(state, query), fields(
         full = %query.full,
         pagination.page = query.pagination.map(|p| p.page),
         pagination.limit = query.pagination.map(|p| p.limit),

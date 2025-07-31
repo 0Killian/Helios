@@ -8,6 +8,7 @@ use serde::{Deserialize, de::Visitor};
 use thiserror::Error;
 use tokio::sync::RwLock;
 use tracing::{error, instrument, warn};
+use validator::{Validate, ValidationErrors};
 
 #[derive(Error, Debug)]
 enum BboxRouterApiError {
@@ -22,30 +23,26 @@ enum BboxRouterApiError {
 
     #[error("Missing required field: {0}")]
     MissingField(String),
+
+    #[error("Validation errors: {0}")]
+    ValidationErrors(#[from] ValidationErrors),
 }
 
 impl From<BboxRouterApiError> for RouterApiError {
     fn from(err: BboxRouterApiError) -> Self {
-        // TODO: Log the error
+        error!(
+            error = err.to_string(),
+            "An error occurred while using the router API"
+        );
         match err {
-            BboxRouterApiError::RequestFailed(e) => {
-                error!("An error occurred while making the request: {}", e);
-                RouterApiError::Unavailable
-            }
+            BboxRouterApiError::RequestFailed(_) => RouterApiError::Unavailable,
             BboxRouterApiError::UnexpectedStatus(status) if status == StatusCode::UNAUTHORIZED => {
-                error!("Failed to authenticate with the router");
                 RouterApiError::AuthenticationFailed
             }
-            BboxRouterApiError::UnexpectedStatus(status) => {
-                error!("API returned unexpected status: {}", status);
-                RouterApiError::InvalidResponse(err.to_string())
-            }
-            BboxRouterApiError::ParseError(ref e) => {
-                error!("Failed to parse response body: {}", e);
-                RouterApiError::InvalidResponse(err.to_string())
-            }
-            BboxRouterApiError::MissingField(ref e) => {
-                error!("Missing required field in response: {}", e);
+            BboxRouterApiError::UnexpectedStatus(_)
+            | BboxRouterApiError::ParseError(_)
+            | BboxRouterApiError::MissingField(_)
+            | BboxRouterApiError::ValidationErrors(_) => {
                 RouterApiError::InvalidResponse(err.to_string())
             }
         }
@@ -108,12 +105,13 @@ impl<'de> Deserialize<'de> for Integer {
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Validate)]
 struct BboxDevice {
     hostname: String,
     macaddress: String,
     ipaddress: IpAddr,
     lastseen: Integer,
+    #[validate(range(min = 0, max = 1))]
     active: usize,
 }
 
@@ -298,6 +296,7 @@ impl RouterApi for BboxRouterApi {
         devices
             .iter()
             .map(|device| {
+                device.validate().map_err(BboxRouterApiError::from)?;
                 Ok(Device {
                     last_seen: chrono::Utc::now()
                         - chrono::Duration::seconds(

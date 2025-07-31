@@ -1,8 +1,8 @@
-use axum::http::{HeaderName, Request};
+use axum::http::Request;
 use std::sync::Arc;
 use tower_http::{
     request_id::{MakeRequestId, PropagateRequestIdLayer, RequestId, SetRequestIdLayer},
-    trace::{DefaultMakeSpan, TraceLayer},
+    trace::TraceLayer,
 };
 use tracing::{Level, info, span};
 use tracing_subscriber::util::SubscriberInitExt;
