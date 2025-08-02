@@ -8,6 +8,7 @@ common.workspace = true
 domain.workspace = true
 router-api.workspace = true
 repositories.workspace = true
+ports.workspace = true
 
 tokio.workspace = true
 sqlx.workspace = true
@@ -15,3 +16,4 @@ anyhow.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
 chrono.workspace = true
+thiserror.workspace = true

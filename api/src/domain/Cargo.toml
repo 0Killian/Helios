@@ -14,3 +14,5 @@ uuid.workspace = true
 thiserror.workspace = true
 validator.workspace = true
 tracing.workspace = true
+futures-util.workspace = true
+protocol.workspace = true

@@ -1,3 +1,4 @@
+use agent_connection::InMemoryAgentConnectionManager;
 use axum::http::Request;
 use std::sync::Arc;
 use tower_http::{
@@ -12,7 +13,7 @@ use axum_distributed_routing::{create_router, route_group};
 use common::{CONFIG, RouterKind};
 use domain::{
     CreateServiceUseCase, FetchNetworkStatusUseCase, GenerateInstallScriptUseCase,
-    ListDevicesUseCase, ListServiceTemplatesUseCase,
+    HandleAgentWebsocketUseCase, ListDevicesUseCase, ListServiceTemplatesUseCase,
 };
 use ports::repositories::{DevicesRepository, ServicesRepository, UnitOfWorkProvider};
 use repositories::{PostgresDevicesRepository, PostgresServicesRepository, PostgresUWP};
@@ -33,6 +34,7 @@ where
     list_service_templates: ListServiceTemplatesUseCase,
     create_service: CreateServiceUseCase<SR, UWP>,
     generate_install_script: GenerateInstallScriptUseCase<SR, UWP>,
+    handle_agent_websocket: HandleAgentWebsocketUseCase<SR, UWP>,
 }
 
 type PostgresAppState =
@@ -63,8 +65,7 @@ impl MakeRequestId for MakeRequestUuid {
 async fn main() -> anyhow::Result<()> {
     tracing_subscriber::registry()
         .with(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "rest=debug,tower_http=debug".into()),
+            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()),
         )
         .with(tracing_subscriber::fmt::layer())
         .init();
@@ -86,13 +87,18 @@ async fn main() -> anyhow::Result<()> {
     ));
 
     let unit_of_work_provider = PostgresUWP::new(pg_pool);
+    let acm = Arc::new(InMemoryAgentConnectionManager::new());
 
     let app_state = AppState {
         list_devices: ListDevicesUseCase::new(unit_of_work_provider.clone()),
-        fetch_network_status: FetchNetworkStatusUseCase::new(router_api),
+        fetch_network_status: FetchNetworkStatusUseCase::new(router_api.clone()),
         list_service_templates: ListServiceTemplatesUseCase,
         create_service: CreateServiceUseCase::new(unit_of_work_provider.clone()),
         generate_install_script: GenerateInstallScriptUseCase::new(unit_of_work_provider.clone()),
+        handle_agent_websocket: HandleAgentWebsocketUseCase::new(
+            unit_of_work_provider.clone(),
+            acm.clone(),
+        ),
     };
 
     let router = create_router!(Base)
@@ -126,7 +132,7 @@ async fn main() -> anyhow::Result<()> {
         )
         .layer(SetRequestIdLayer::x_request_id(MakeRequestUuid));
 
-    Ok(axum::serve(
+    let web_server = axum::serve(
         TcpListener::bind((CONFIG.api.listen_address, CONFIG.api.listen_port))
             .await
             .map(|listener| {
@@ -134,6 +140,17 @@ async fn main() -> anyhow::Result<()> {
                 listener
             })?,
         router,
+    );
+
+    let cron = cron::cron::<PostgresDevicesRepository, PostgresUWP>(
+        router_api,
+        unit_of_work_provider,
+        acm,
     )
-    .await?)
+    .await?;
+
+    Ok(tokio::select! {
+        r = web_server => r?,
+        _ = cron => (),
+    })
 }
